@@ -92,7 +92,7 @@ async function fetchCredential(request) { //TODO: SECURE THAT <<<<<<<<<<<<<<
     const POSTconfig = {
 	    credentials: 'include',
 	    headers: {
-	    	Authorization: 'Basic '+btoa('wallet:'+'qwerty'),
+	    	Authorization: 'Basic '+btoa('wallet:' + request.walletPass), //TODO: btoa -> Buffer.from(r, "base64")
 	        'Content-Type': 'application/x-www-form-urlencoded'
 	        },
 	    body: "grant_type=client_credentials",

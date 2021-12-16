@@ -25,14 +25,17 @@ app.post('/getvc/', (req, res)=> {
   console.log("Request for ", req.body);
   
   const VC = {
-              type: VC_TYPE,
-              org: USER_ORG,
               iss: "localhost:3000/getvc/",
-              credentialSubject: {
-                capabilities: ["READ", "WRITE"]}
-            }
+              vc: {
+                type: VC_TYPE,
+                credentialSubject: {
+                  capabilities: ["READ", "WRITE"]}
+                }
+              };
 
-  res.json({vc: btoa(JSON.stringify(VC))});
+  res.json({vc: 
+    Buffer.from(JSON.stringify({alg: "someAlg"})).toString("base64") + "." + 
+    Buffer.from(JSON.stringify(VC)).toString("base64")});
 })
 
 app.listen(port, () => {
