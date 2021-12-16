@@ -1,0 +1,19 @@
+{
+	"manifest_version": 3,
+	"name": "Credential Handler",
+	"version": "0.1",
+	"action": {
+		"default_icon": "assets/zerotrustvc_icon.png",
+		"default_popup": "html/popup.html",
+		"default_title": "Verifiable Credential Handler"
+	},
+	 "permissions": [
+    	"activeTab",
+    	"downloads",
+    	"storage",
+    	"webRequest"
+  	],
+	 "host_permissions": [
+    "<all_urls>"
+  ]
+}

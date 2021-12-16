@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Credentials Handler</title>
+	<style  type="text/css">
+		body {
+			min-width: 700px;
+			max-width:  100%;
+			position:  relative;
+		}
+	</style>
+</head>
+<body>
+	<h1>Get a Credential</h1>
+
+	<div>
+		<form id = "getVC_form">
+			<label for="issuer_url_input">Issuer's URL</label><br>
+			<input type="text" id="issuer_url_input"><br>
+			<label for="wallet_pass_input">Wallet Credential</label><br>
+			<input type="text" id="wallet_pass_input"><br>
+		</form>
+	</div>
+	<hr>
+
+	<div>
+		<button type="button" id = "back_btn">Back!</button>
+		<button type="button" id = "getVC_btn">Get Credential!</button>
+    </div>
+	<script type="text/javascript" src = "../scripts/getVC-popup-script.js"></script>
+</body>
+</html>

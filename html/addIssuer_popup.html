@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Credentials Handler</title>
+	<style  type="text/css">
+		body {
+			min-width: 700px;
+			max-width:  100%;
+			position:  relative;
+		}
+	</style>
+</head>
+<body>
+	<h1>Add an Issuerr</h1>
+
+	<div>
+		<form id="IssuersName_form">
+			<label for="IssuersName_input">Issuer's Name</label><br>
+			<input type="text" id = "IssuersName_input">
+		</form>
+	</div>
+
+	<div>
+		<form id="IssuerEndPoint_form">
+			<!-- TODO: try to find the issuers end point from the web page -->
+			<label for="IssuerEndPoint_input">Issuer's URL</label><br>
+			<input type="text" id = "IssuerEndPoint_input">
+		</form>
+	</div>
+
+	<hr>
+
+	<div>
+		<button type="button" id = "back_btn">Back!</button>
+		<button type="button" id = "saveIssuer_btn">Add!</button>
+    </div>
+
+	<script type="text/javascript" src = "../scripts/addIssuer-popup-script.js"></script>
+</body>
+</html>
