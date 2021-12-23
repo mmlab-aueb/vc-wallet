@@ -6,7 +6,7 @@ document.getElementById("back_btn").addEventListener("click", function(){
 
 
 // send POST request for VC and update the local state
-// credentialsState = {SavedCredentials: ["iss", "type", "downloadId", "filePath"]}
+// credentialsState = {SavedCredentials: ["iss", "type", "aud", "downloadId", "filePath"]}
 document.getElementById("getVC_btn").addEventListener("click", function(){
 	// read the issuers url and the wallet pass
 	const request = {"IssuingURL": document.getElementById("issuer_url_input").value,
@@ -29,6 +29,9 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 			newVCstate.iss = vcJWTpayload.iss;
 			newVCstate.type = vcJWTpayload.vc.type;
 		}
+
+		// >>>>>>>>>> hardcoding the aud parameter for testing <<<<<<<<<<<
+		newVCstate.aud = "http://127.0.0.1:3001/photos/"
 
  		// download the vc to file system
  		chrome.downloads.download({
@@ -71,7 +74,7 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 )
 
 
-// Read the "issuersURL" local variable and if not empty (is only set when a issuer element 
+// get the "issuersURL" local variable and if not empty (is only set when a issuer element 
 // in the Issuers_list_ul of popup.html is clicked) set it as defaul value to the issuers url 
 // input
 chrome.storage.local.get(["issuersURL"], function(res) {
