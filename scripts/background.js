@@ -32,8 +32,7 @@ const readLocalStorage = async (key) => {
 
             req.onerror = function () {
                 reject({status: this.status,
-                        statusText: req.statusText
-                    })
+                        statusText: req.statusText})
             }
 
             req.open('GET', url);
@@ -48,7 +47,7 @@ const main = async () => {
     // saved credentials
     const CREDENTIAL_STATE_NAME = "SavedCredentials"
 
-    // Init the auds as a map between the audience base64 vc. 
+    // Init the auds as a map between the audience and the VCs path in the FS. 
     // This will give O(1) lookup for auds
     const auds = {} 
 
@@ -64,7 +63,7 @@ const main = async () => {
             if ((auds[el.aud] == undefined) && (!(el.filePath == undefined))){
                 // Get the vc
                 try{
-                    auds[el.aud] = await fetchLocalResource(el.filePath)
+                    auds[el.aud] = el.filePath;
                 } catch(error) {
                     alert("Error while trying to load credential from "+el.filePath)
                 }
@@ -109,10 +108,19 @@ const main = async () => {
             if (!(auds[e.url] == undefined)) {
                 // Get the credential
                 alert(e.url + " Reqests a Credential")
-                const credential = auds[e.url]
+                const credential = {};
+
+                fetchLocalResource(auds[e.url])
+                .then(res => {
+                    const jsonRes = JSON.parse(res)
+                    console.log("in onBeforeSendHeaders after fetchLocal, res = ", jsonRes)
+                    Object.assign(credential, {vc: jsonRes["vc"]})
+                })
+
+                console.log("in onBeforeSendHeaders, credential = ", credential);
 
                 // Add the headers
-                e.requestHeaders.push({name: "authorization", value: credential})
+                e.requestHeaders.push({name: "authorization", value: JSON.stringify(credential)})
                 e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
             }
 
