@@ -28,7 +28,7 @@ app.get("/photos", (req, res) => {
     // Supposedly auth is valid, return photo
     // TODO: Also return a secure cookie for that session
     res.sendFile(path.join(__dirname, 'data/photos/photo_' + photoNum + '.jpg'))
-  } 
+  }
   else {
     res.setHeader('WWW-Authenticate', 'Basic realm="/photos"')
        .status(401)

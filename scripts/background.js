@@ -61,8 +61,8 @@ const main = async () => {
 
         for (el of SavedCredentials){
             if ((auds[el.aud] == undefined) && (!(el.filePath == undefined))){
-                // Get the vc
                 try{
+                    //TODO: Cehck if el.filePath exists
                     auds[el.aud] = el.filePath;
                 } catch(error) {
                     alert("Error while trying to load credential from "+el.filePath)
@@ -84,12 +84,8 @@ const main = async () => {
                 for (el of newValue){
                     // Get the vc
                     try{
-                        fetchLocalResource(el.filePath)
-                        .then(res => {
-                            auds[el.aud] = res
-                        })
-                        .catch(err => console.log(err))
-
+                        //TODO: Cehck if el.filePath exists
+                        auds[el.aud] = el.filePath
                     } catch(error) {
                         alert("Error while trying to load credential from "+el.filePath)
                     }
