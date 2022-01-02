@@ -98,12 +98,13 @@ const main = async () => {
                 alert(e.url + " Reqests a Credential");
 
                 try{
+                    // TODO: Cach the results in memory
                     const credential = fetchLocalResourceSync(auds[e.url]);
                     const JSONcredential = JSON.parse(credential);
                     console.log("in onBeforeSendHeaders, credential = ", JSONcredential);
 
                     // Add the headers
-                    e.requestHeaders.push({name: "authorization", value: JSONcredential["vc"]})
+                    e.requestHeaders.push({name: "authorization", value: "Bearer " + JSONcredential["vc"]})
                     e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
 
                 }catch(e){
@@ -119,7 +120,6 @@ const main = async () => {
         },
         ["blocking", "requestHeaders", "extraHeaders"]
     )
-
 }
 
 main();
