@@ -14,31 +14,23 @@ const readLocalStorage = async (key) => {
 
 
 /**
- * Get the credential from the local file system
+ * Synchronously get the credential from the local file system
  */
- async function fetchLocalResource(url) {
-    return new Promise(
-        function (resolve, reject) {
-            const req = new XMLHttpRequest();
+function fetchLocalResourceSync(url) {
+    const req = new XMLHttpRequest();
 
-            req.onreadystatechange = function() {
-                if (req.readyState === 4) {
-                  console.log(req.response);
-                  chrome.storage.local.set({"LoadedCredentials": req.response})
-                  window.userCred =  req.response;
-                  resolve(req.response)
-                }
-            };
+    req.open('GET', url, false);
 
-            req.onerror = function () {
-                reject({status: this.status,
-                        statusText: req.statusText})
-            }
+    req.send(null);
 
-            req.open('GET', url);
-            req.send();
-        }
-    )
+    console.log("in fetchLocalResourceSync, req = ", req)
+
+    if (req.readyState == 4) {
+        return req.responseText
+    } else {
+        throw Error("Cant load credential from " + url)
+        return null
+    }
 }
 
 
@@ -103,21 +95,20 @@ const main = async () => {
             // there is a saved vc.
             if (!(auds[e.url] == undefined)) {
                 // Get the credential
-                alert(e.url + " Reqests a Credential")
-                const credential = {};
+                alert(e.url + " Reqests a Credential");
 
-                fetchLocalResource(auds[e.url])
-                .then(res => {
-                    const jsonRes = JSON.parse(res)
-                    console.log("in onBeforeSendHeaders after fetchLocal, res = ", jsonRes)
-                    Object.assign(credential, {vc: jsonRes["vc"]})
-                })
+                try{
+                    const credential = fetchLocalResourceSync(auds[e.url]);
+                    const JSONcredential = JSON.parse(credential);
+                    console.log("in onBeforeSendHeaders, credential = ", JSONcredential);
 
-                console.log("in onBeforeSendHeaders, credential = ", credential);
+                    // Add the headers
+                    e.requestHeaders.push({name: "authorization", value: JSONcredential["vc"]})
+                    e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
 
-                // Add the headers
-                e.requestHeaders.push({name: "authorization", value: JSON.stringify(credential)})
-                e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
+                }catch(e){
+                    alert(e);
+                }
             }
 
             return {requestHeaders: e.requestHeaders};
