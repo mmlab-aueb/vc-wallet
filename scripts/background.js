@@ -53,12 +53,8 @@ const main = async () => {
 
         for (el of SavedCredentials){
             if ((auds[el.aud] == undefined) && (!(el.filePath == undefined))){
-                try{
-                    //TODO: Cehck if el.filePath exists
-                    auds[el.aud] = el.filePath;
-                } catch(error) {
-                    alert("Error while trying to load credential from "+el.filePath)
-                }
+                //TODO: Cehck if el.filePath exists
+                auds[el.aud] = el.filePath;
             }
         }
     } catch(err){
@@ -74,13 +70,8 @@ const main = async () => {
         for ([key, {newValue, oldValue}] of Object.entries(changes)) {
             if ((key == CREDENTIAL_STATE_NAME) && (nameSpace == "local") && (newValue)) {
                 for (el of newValue){
-                    // Get the vc
-                    try{
-                        //TODO: Cehck if el.filePath exists
-                        auds[el.aud] = el.filePath
-                    } catch(error) {
-                        alert("Error while trying to load credential from "+el.filePath)
-                    }
+                    //TODO: Cehck if el.filePath exists
+                    auds[el.aud] = el.filePath
                 }
             }
         }
