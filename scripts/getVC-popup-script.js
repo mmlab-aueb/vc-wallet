@@ -25,51 +25,35 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 		// decode credential JWT and save iss and type to the state
 		vcJWTpayload = parseJwt(data.vc)
 
-		if (vcJWTpayload.iss && vcJWTpayload.vc.type){
+		console.log("Credential payload to save: ", vcJWTpayload)
+
+		if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
 			newVCstate.iss = vcJWTpayload.iss;
 			newVCstate.type = vcJWTpayload.vc.type;
+			newVCstate.aud = vcJWTpayload.aud
 		}
 
-		// >>>>>>>>>> hardcoding the aud parameter for testing <<<<<<<<<<<
-		newVCstate.aud = "http://127.0.0.1:3001/photos/"
+		newVCstate.payload = data.vc;
 
- 		// download the vc to file system
- 		chrome.downloads.download({
- 			url: "data:application/json;charset=utf-8,"+JSON.stringify(data),
- 			filename: "Credential.json",
- 			saveAs: true
- 			}, function (downloadId) {
- 				console.log("DOWNLOAD ID: ", downloadId);
- 		 		newVCstate.downloadId = downloadId;
- 		 	});
+		chrome.storage.local.get(["SavedCredentials"], function(res) {
+			let state = [];
+			if (res.SavedCredentials) {
+				state = res.SavedCredentials;};
+		   
+		   // update state and return to main popup
+		   state.push(newVCstate);
+		   chrome.storage.local.set({"SavedCredentials": state}, 
+		   function() {
+			   console.log('getVC-popup-script.js: Updated local state', state);
+			   //window.location.href = "../html/popup.html"
+			});
+		   })
+
  	}).catch(error => {
 		 alert("Resolving Credential Error")
 		 console.log("getVC-popup-script.js: Error: ", error)
 	 });
 
- 	// update the local credentials state (credential type, issuer and where is saved on the file system)
- 	// TODO: if the user change the locatiion of the VC open a "load" dialog and update the state
- 	chrome.downloads.onChanged.addListener(function(downloadItem) {
-		 if (newVCstate.downloadId && downloadItem.id && (newVCstate.downloadId == downloadItem.id)) {
-			 if (downloadItem.filename) {
-				 // Get the local state and append the new value (TODO: find a beter way, waybe localStorage)]
-				 chrome.storage.local.get(["SavedCredentials"], function(res) {
-					 let state = [];
-					 if (res.SavedCredentials) {
-						 state = res.SavedCredentials;};
-						 
-					newVCstate.filePath = downloadItem.filename.current;
-					
-					// update state and return to main popup
-					state.push(newVCstate);
-					chrome.storage.local.set({"SavedCredentials": state}, 
-					function() {
-						console.log('getVC-popup-script.js: Updated local state', state);
-						window.location.href = "../html/popup.html"});
-					})
-				}
-			}
-		})
 	}
 )
 
@@ -86,7 +70,6 @@ chrome.storage.local.get(["issuersURL"], function(res) {
 })
 //set the "issuersURL" to null again
 chrome.storage.local.set({"issuersURL": null})
-
 
 // POST the issuing end point for a credential, returns a promise
 async function fetchCredential(request) { //TODO: SECURE THAT <<<<<<<<<<<<<<

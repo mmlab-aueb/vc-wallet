@@ -33,6 +33,23 @@ function fetchLocalResourceSync(url) {
     }
 }
 
+/**
+ * check if there is a saved credential with an audience for
+ * which the given url is a sub url
+ */
+function hasCredential(auds, url) {
+    for (aud of Object.keys(auds)) {
+        if (url.indexOf(aud) > -1) {
+            return aud;
+        }
+    }
+    return false;
+}
+
+function formatAudUrl(url) {
+    return /\/\*$/.test(url) ? url : (/\/$/.test(url) ? url + "*" : url + "/*");
+} 
+
 
 const main = async () => {
     // The name of the local storage acting as state for the
@@ -41,24 +58,21 @@ const main = async () => {
 
     // Init the auds as a map between the audience and the VCs path in the FS. 
     // This will give O(1) lookup for auds
-    const auds = {} 
+    const auds = {};
+    const urlsToCeck = [];
+    const cache = {};
 
     // Get the state
-    // NOTE: This solution does not yet take in consideration the case where 
-    //       the Holder has multiple credentials for the same audience.
     let SavedCredentials = {}
     try{
         SavedCredentials = await readLocalStorage(CREDENTIAL_STATE_NAME);
         console.log("In main, SavedCredentials = ", SavedCredentials);
 
         for (el of SavedCredentials){
-            if ((auds[el.aud] == undefined) && (!(el.filePath == undefined))){
-                try{
-                    //TODO: Cehck if el.filePath exists
-                    auds[el.aud] = el.filePath;
-                } catch(error) {
-                    alert("Error while trying to load credential from "+el.filePath)
-                }
+            if ((auds[el.aud] == undefined) && (!(el.payload == undefined))){
+                auds[el.aud] = el.payload;
+                urlsToCeck.push(formatAudUrl(el.aud));
+                console.log("in main, urlsToCeck = ", urlsToCeck)
             }
         }
     } catch(err){
@@ -74,13 +88,9 @@ const main = async () => {
         for ([key, {newValue, oldValue}] of Object.entries(changes)) {
             if ((key == CREDENTIAL_STATE_NAME) && (nameSpace == "local") && (newValue)) {
                 for (el of newValue){
-                    // Get the vc
-                    try{
-                        //TODO: Cehck if el.filePath exists
-                        auds[el.aud] = el.filePath
-                    } catch(error) {
-                        alert("Error while trying to load credential from "+el.filePath)
-                    }
+                    auds[el.aud] = el.payload
+                    urlsToCeck.push(formatAudUrl(el.aud))
+                    console.log("in main, urlsToCeck = ", urlsToCeck)
                 }
             }
         }
@@ -93,19 +103,27 @@ const main = async () => {
             
             // check if the request is for a protected resource for which 
             // there is a saved vc.
-            if (!(auds[e.url] == undefined)) {
+            if (!(cache[e.url] == undefined)) {
+                // Add the headers
+                e.requestHeaders.push({name: "authorization", value: "Bearer " + cache[e.url]})
+                e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
+            }
+
+            const audience = hasCredential(auds, e.url)
+            console.log("onBeforeSendHeaders: audience = ", audience);
+            if (audience) {
                 // Get the credential
                 alert(e.url + " Reqests a Credential");
 
                 try{
-                    // TODO: Cach the results in memory
-                    const credential = fetchLocalResourceSync(auds[e.url]);
-                    const JSONcredential = JSON.parse(credential);
-                    console.log("in onBeforeSendHeaders, credential = ", JSONcredential);
+                    const credential = auds[audience];
+                    console.log("in onBeforeSendHeaders, credential = ", credential);
 
                     // Add the headers
-                    e.requestHeaders.push({name: "authorization", value: "Bearer " + JSONcredential["vc"]})
+                    e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
                     e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
+
+                    cache[e.url] = credential
 
                 }catch(e){
                     alert(e);
@@ -116,7 +134,7 @@ const main = async () => {
         },
         {
             // only listen for the protected resources that there is a vc with that audience
-            urls: Object.keys(auds)
+            urls: urlsToCeck
         },
         ["blocking", "requestHeaders", "extraHeaders"]
     )

@@ -62,8 +62,7 @@ function DOMaddVC(newVC, HTML_li_id) {
 
   const new_vc_li = document.createElement("li")
   new_vc_li.id = HTML_li_id
-  new_vc_li.appendChild(document.createTextNode(newVC.filePath.split("\\").at(-1) + " , "
-   + newVC.type[1] + " , " + newVC.iss));
+  new_vc_li.appendChild(document.createTextNode(newVC.type[1] + " , " + newVC.iss + " , " + newVC.aud));
 
   //add the new list element
   vc_ul.appendChild(new_vc_li)
