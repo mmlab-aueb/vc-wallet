@@ -45,7 +45,7 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 		   chrome.storage.local.set({"SavedCredentials": state}, 
 		   function() {
 			   console.log('getVC-popup-script.js: Updated local state', state);
-			   //window.location.href = "../html/popup.html"
+			   window.location.href = "../html/getVC_success.html"
 			});
 		   })
 

@@ -100,20 +100,17 @@ const main = async () => {
     chrome.webRequest.onBeforeSendHeaders.addListener(
         (e) => {
             console.log("onBeforeSendHeaders: e = ", e);
+            console.log("onBeforeSendHeaders, urlsToCeck = ", urlsToCeck)
             
             // check if the request is for a protected resource for which 
             // there is a saved vc.
-            if (!(cache[e.url] == undefined)) {
-                // Add the headers
-                e.requestHeaders.push({name: "authorization", value: "Bearer " + cache[e.url]})
-                e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
-            }
-
             const audience = hasCredential(auds, e.url)
             console.log("onBeforeSendHeaders: audience = ", audience);
             if (audience) {
-                // Get the credential
-                alert(e.url + " Reqests a Credential");
+                if (cache[audience] == undefined) {
+                    // Add the headers
+                    alert(e.url + " Reqests a Credential");
+                }
 
                 try{
                     const credential = auds[audience];
@@ -123,7 +120,7 @@ const main = async () => {
                     e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
                     e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
 
-                    cache[e.url] = credential
+                    cache[audience] = credential
 
                 }catch(e){
                     alert(e);
@@ -138,6 +135,8 @@ const main = async () => {
         },
         ["blocking", "requestHeaders", "extraHeaders"]
     )
+
+    chrome.webRequest.handlerBehaviorChanged(()=>{console.log("Chach cleared??")})
 }
 
 main();
