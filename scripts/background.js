@@ -48,7 +48,8 @@ function hasCredential(auds, url) {
 
 function formatAudUrl(url) {
     return /\/\*$/.test(url) ? url : (/\/$/.test(url) ? url + "*" : url + "/*");
-} 
+}
+
 
 
 const main = async () => {
@@ -59,7 +60,7 @@ const main = async () => {
     // Init the auds as a map between the audience and the VCs path in the FS. 
     // This will give O(1) lookup for auds
     const auds = {};
-    const urlsToCeck = [];
+    const urlsToCheck = [];
     const cache = {};
 
     // Get the state
@@ -71,8 +72,8 @@ const main = async () => {
         for (el of SavedCredentials){
             if ((auds[el.aud] == undefined) && (!(el.payload == undefined))){
                 auds[el.aud] = el.payload;
-                urlsToCeck.push(formatAudUrl(el.aud));
-                console.log("in main, urlsToCeck = ", urlsToCeck)
+                urlsToCheck.push(formatAudUrl(el.aud));
+                console.log("in main, urlsToCheck = ", urlsToCheck)
             }
         }
     } catch(err){
@@ -80,6 +81,54 @@ const main = async () => {
     }
 
     console.log("In main, auds = ", auds);
+
+    /**
+     * the callback for the request listener as a named function
+     * (used also to remove the listener)
+     */
+    function reqListenerCallback (e) {
+        console.log("onBeforeSendHeaders: e = ", e);
+        console.log("onBeforeSendHeaders, urlsToCheck = ", urlsToCheck)
+        
+        // check if the request is for a protected resource for which 
+        // there is a saved vc.
+        const audience = hasCredential(auds, e.url)
+        console.log("onBeforeSendHeaders: audience = ", audience);
+        if (audience) {
+            if (cache[audience] == undefined) {
+                // Ask for permision from the user
+                // TODO: break if user presses cancel
+                alert(e.url + " Reqests a Credential");
+            }
+            const credential = auds[audience];
+            console.log("in onBeforeSendHeaders, credential = ", credential);
+
+            // Add the headers
+            e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
+            e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
+
+            cache[audience] = credential
+        }
+    
+        return {requestHeaders: e.requestHeaders};
+    }
+
+    /**
+     *  Add a HTTP request event listener
+     */
+    function addRequestListener(auds, urlsToCheck, cache) {
+        //HTTP GET Request event listener
+        chrome.webRequest.onBeforeSendHeaders.addListener(
+            reqListenerCallback,
+            {
+                // only listen for the protected resources that there is a vc with that audience
+                urls: urlsToCheck
+            },
+            ["blocking", "requestHeaders", "extraHeaders"]
+        )
+    }
+
+    addRequestListener(auds, urlsToCheck, cache);
 
     // Update the state when needed (i.e., when a new vc is saved)
     chrome.storage.onChanged.addListener((changes, nameSpace) => {
@@ -89,52 +138,16 @@ const main = async () => {
             if ((key == CREDENTIAL_STATE_NAME) && (nameSpace == "local") && (newValue)) {
                 for (el of newValue){
                     auds[el.aud] = el.payload
-                    urlsToCeck.push(formatAudUrl(el.aud))
-                    console.log("in main, urlsToCeck = ", urlsToCeck)
+                    urlsToCheck.push(formatAudUrl(el.aud))
+                    console.log("in main, urlsToCheck = ", urlsToCheck)
+                    // remove the onBeforeSendHeaders listener and re-add him with
+                    // the new filtering rules (urlsToCheck) and audiences (auds)
+                    chrome.webRequest.onBeforeSendHeaders.removeListener(reqListenerCallback);
+                    addRequestListener(auds, urlsToCheck, cache)
                 }
             }
         }
     })
-
-    //HTTP GET Request event listener
-    chrome.webRequest.onBeforeSendHeaders.addListener(
-        (e) => {
-            console.log("onBeforeSendHeaders: e = ", e);
-            console.log("onBeforeSendHeaders, urlsToCeck = ", urlsToCeck)
-            
-            // check if the request is for a protected resource for which 
-            // there is a saved vc.
-            const audience = hasCredential(auds, e.url)
-            console.log("onBeforeSendHeaders: audience = ", audience);
-            if (audience) {
-                if (cache[audience] == undefined) {
-                    // Add the headers
-                    alert(e.url + " Reqests a Credential");
-                }
-
-                try{
-                    const credential = auds[audience];
-                    console.log("in onBeforeSendHeaders, credential = ", credential);
-
-                    // Add the headers
-                    e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
-                    e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
-
-                    cache[audience] = credential
-
-                }catch(e){
-                    alert(e);
-                }
-            }
-
-            return {requestHeaders: e.requestHeaders};
-        },
-        {
-            // only listen for the protected resources that there is a vc with that audience
-            urls: urlsToCeck
-        },
-        ["blocking", "requestHeaders", "extraHeaders"]
-    )
 
     chrome.webRequest.handlerBehaviorChanged(()=>{console.log("Chach cleared??")})
 }
