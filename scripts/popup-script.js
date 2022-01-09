@@ -33,7 +33,8 @@ document.getElementById("VCs_list_ul").addEventListener("click",
         // of the cliced VC. Is that secure?? maybe change the state from a list
         // to a map??
         const VCstate = res.SavedCredentials[parseInt(event.target.id)];
-        alert(JSON.stringify(VCstate, null, 2))
+        const display = {Issuer: VCstate.iss, Audience: VCstate.aud, Type: VCstate.type}
+        alert(JSON.stringify(display, null, 2))
       };
 
     })
@@ -70,7 +71,7 @@ function DOMaddVC(newVC, HTML_li_id) {
 
 
 // read the saved issuers and vcs and display them in the popup
-function main() {
+const main = () => {
   // read and display the issuers state
   chrome.storage.local.get(["issuers"], function(res) {
     console.log("popup-script.js: read issuers state ", res.issuers);

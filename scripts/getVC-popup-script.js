@@ -35,15 +35,33 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 
 		newVCstate.payload = data.vc;
 
-		chrome.storage.local.get(["SavedCredentials"], function(res) {
+		chrome.storage.local.get(["SavedCredentials"], (res) => {
 			let state = [];
 			if (res.SavedCredentials) {
 				state = res.SavedCredentials;};
 		   
 		   // update state and return to main popup
 		   state.push(newVCstate);
-		   chrome.storage.local.set({"SavedCredentials": state}, 
-		   function() {
+
+		   // If the credential is for an issuer that is not already saved, save the issuer
+		   chrome.storage.local.get(["issuers"], (res) => {
+			   console.log("issuers res = ", res);
+			   let issuers = res.issuers ? res.issuers : [];
+			   let found = false;
+			   for (issuer of issuers) {
+				   if (issuer.url == newVCstate.iss) {found = true};
+			   }
+
+			   if (!found) {
+				   const issURL = new URL(newVCstate.iss);
+				   issuers.push({name: issURL.hostname, url: newVCstate.iss});
+				   chrome.storage.local.set({"issuers": issuers}, () => {
+					   console.log("getVC-popup-script.js: added a new issuer to the issuers state")
+				   })
+			   }
+		   })
+
+		   chrome.storage.local.set({"SavedCredentials": state}, () => {
 			   console.log('getVC-popup-script.js: Updated local state', state);
 			   window.location.href = "../html/getVC_success.html"
 			});
