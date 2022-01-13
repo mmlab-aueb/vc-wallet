@@ -49,7 +49,8 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 			   let issuers = res.issuers ? res.issuers : [];
 			   let found = false;
 			   for (issuer of issuers) {
-				   if (issuer.url == newVCstate.iss) {found = true};
+				   const issuerUrl = issuer.url;
+				   if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
 			   }
 
 			   if (!found) {
@@ -63,7 +64,7 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 
 		   chrome.storage.local.set({"SavedCredentials": state}, () => {
 			   console.log('getVC-popup-script.js: Updated local state', state);
-			   window.location.href = "../html/getVC_success.html"
+			   //window.location.href = "../html/getVC_success.html"
 			});
 		   })
 

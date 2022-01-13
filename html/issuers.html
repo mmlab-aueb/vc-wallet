@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Credentials Handler</title>
 	<link rel="stylesheet" href="../css/style.css">
+	<title>Credentials Handler</title>
 	<style  type="text/css">
+
 	</style>
 </head>
 <body>
@@ -14,23 +15,18 @@
 
 	<!-- Navigation Bar -->
 	<ul class="topnav">
-		<li><a class="active">Home!</a></li>
+        <li><a href="./popup.html">Home!</a></li>
 		<li><a href="./credentials.html">Credetials!</a></li>
-		<li><a href="./issuers.html">Issuers!</a></li>
+		<li><a class="active">Issuers!</a></li>
 	</ul>
 
-	<div class="grid-container">
-		<div class="grid-child purple">
-			<img src="../assets/user.png" alt="User" width="100" height="100">
-		</div>
-		<div class="grid-child green">
-			<p class="p">Signed in as: mmLab</p>
-			<p class="p">Organization: AUEB</p>
-		</div>
+	<!-- <h2>Saved Issuers:</h2> -->
+	<div id = "Saved_Issuers_div" class="divScroll">
+		<!-- <p id="issList_initial_msg_p">There are no saved Issuers</p> -->
+		<ul id = "Issuers_list_ul"></ul>
 	</div>
-	
-	<!-- <div class="divBoarder"></div> -->
-
+    
+    <!-- <div class="divBoarder"></div> -->
 	<div class="botomBar">
 		<div class="divButton">
 			<button id="addIssuer_btn" class="button" type="button">Add Issuer!</button>
@@ -38,6 +34,7 @@
 		</div>
 	</div>
 
-	<script type="text/javascript" src = "../scripts/popup-script.js"></script>
+    <script type="text/javascript" src = "../scripts/issuers-script.js"></script>
+    <script type="text/javascript" src="../scripts/popup-script.js"></script>
 </body>
 </html>
