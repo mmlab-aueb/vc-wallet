@@ -1,5 +1,5 @@
 body {
-  background-color: #edf5f8;
+  background-color: rgb(59, 56, 56);
   width: 600px;
   height: 120px;
   /* min-width: 700px;
@@ -15,35 +15,22 @@ body {
   color: #ffffff;
 }
 
-.divHeader {
-  padding: 0px;
-  text-align: center;
-  color: rgb(255, 251, 251);
-  background-color: rgb(59, 56, 56);
-  font-size: 12px;
-  margin-top: 0px;
-  padding-top: 0px;
-  height: 40px;
-}
-
 .header {
   font-family: serif;
   margin-top: 0px;
   padding: 5px;
 }
 
-.button {
-    background-color: #4CAF50;
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 12px;
-    margin: 4px 2px;
-    cursor: pointer;
-  }
+.divHeader {
+  padding: 0px;
+  text-align: center;
+  color: rgb(255, 251, 251);
+  background-color: transparent;
+  font-size: 12px;
+  margin-top: 0px;
+  padding-top: 0px;
+  height: 40px;
+}
 
 img {
   padding: 10px;
@@ -77,12 +64,6 @@ ul.topnav li a.active {background-color: #04AA6D;}
   
 ul.topnav li.right {float: right;}
 
-div.divButton {
-    /* position: absolute; */
-    float: right;
-    right: 0px;
-    bottom: 0px;
-}
 
 div.divBoarder{
   margin:0px, 0px;
@@ -98,7 +79,7 @@ div.divScroll {
     padding:0px, 0px;
     padding-right: 0px;
     padding-left: 0px;
-    background-color: rgb(59, 56, 56);
+    background-color: transparent;
     width: 600px;
     height: 100%;
     /* max-height: 110px; */
@@ -118,7 +99,7 @@ div.divScroll {
   overflow-x: hidden;
   overflow-y: hidden;
   text-align: justify;
-  background-color: rgb(59, 56, 56);
+  background-color: transparent;
 }
 
 div.botomBar {

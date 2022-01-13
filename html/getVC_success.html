@@ -2,21 +2,85 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="../css/common-style.css">
 	<title>Credentials Handler</title>
 	<style  type="text/css">
 		body {
-			min-width: 700px;
-			max-width:  100%;
+			background-color: rgb(240, 240, 240);
+			width: 300px;
+			height: 350px;
 			position:  relative;
+			margin: 0;
+			padding: 0;
+			border: 1px solid black;
+		}
+
+		div.main-container {
+			display: grid;
+  			grid-template-rows: 2.5fr 1fr;
+			width: 100%;
+			height: 100%;
+		}
+
+		div.top-container.grid-child {
+			float: top;
+			background-color: rgb(29, 161, 68);
+			width: 100%;
+			height: 100%;
+		}
+
+		div.bottom-container.grid-child {
+			background-color: rgb(238, 255, 243);
+			width: 100%;
+			height: 100%;
+		}
+
+		img {
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+			margin-top: 25px;
+		}
+
+		p.title {
+			background: transparent;
+			color: white;
+			font-family: serif;
+			font-size: 25px;
+		}
+
+		.OkButton {
+			background-color: #4CAF50;
+			color: white;
+			border: none;
+			padding: 10px 10px;
+			text-align: center;
+			display: inline-block;
+			font-size: 13px;
+			margin: 2px 2px;
+			cursor: pointer;
+			width: 100%;
 		}
 	</style>
 </head>
 <body>
-	<h1>Success!</h1>
-    <div>
-        <button type="button" class="button" id="Ok_btn">Ok!</button>
-    </div>
+	<div class="main-container">
+		<div class="top-container grid-child">
+			<img src="../assets/tick.png" alt="Success" width="40%" height=auto>
+			<div style="text-align: center; margin-top: 35px;">
+				<p class='title'>Success!</p>
+			</div>
+		</div>
+		<div class="bottom-container grid-child">
+			<p style="text-align: center; font-size: 15px;">You received a credential successfuly!</p>
+			<div style="margin-left: 10px; margin-right: 18px; margin-top: 10px;">
+				<button type="button" class="OkButton" id="Ok_btn">Ok!</button>
+			</div>
+
+			<!-- <button type="button" class="OkButton" id="Ok_btn">Ok!</button> -->
+		</div>	
+	</div>
+	
 	<script type="text/javascript" src = "../scripts/getVC-success-script.js"></script>
 </body>
 </html>

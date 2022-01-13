@@ -2,33 +2,32 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="../css/common-style.css">
+	<link rel="stylesheet" href="../css/adding-style.css">
 	<title>Credentials Handler</title>
 	<style  type="text/css">
-		body {
-			min-width: 700px;
-			max-width:  100%;
-			position:  relative;
-		}
 	</style>
 </head>
 <body>
-	<h1>Get a Credential</h1>
-
-	<div>
-		<form id = "getVC_form">
-			<label for="issuer_url_input">Issuer's URL</label><br>
-			<input type="text" id="issuer_url_input"><br>
-			<label for="wallet_pass_input">Wallet Credentials</label><br>
-			<input type="text" id="wallet_pass_input"><br>
-		</form>
+	<div class="divHeader">
+		<h1 class="header">Get a Credential</h1>
 	</div>
-	<hr>
 
-	<div>
-		<button type="button" class="button" id = "back_btn">Back!</button>
-		<button type="button" class="button" id = "getVC_btn">Get Credential!</button>
-    </div>
+	<div class="mainDiv">
+		<div>
+			<form id = "getVC_form">
+				<label for="issuer_url_input">Issuer's URL</label><br>
+				<input type="text" id="issuer_url_input" placeholder="Url..." autocomplete="off"><br>
+				<label for="wallet_pass_input">Wallet Credentials</label><br>
+				<input type="password" id="wallet_pass_input" placeholder="Username:Pasword..." autocomplete="current-password
+				" required><br>
+			</form>
+		</div>
+
+		<button type="button" class="addBtn" style="margin-top: 10px;" id = "getVC_btn">Get Credential!</button>
+		<button type="button" class="addBtn" style="margin-top: 5px;" id = "back_btn">Home!</button>
+	</div>
+
 	<script type="text/javascript" src = "../scripts/getVC-popup-script.js"></script>
 </body>
 </html>
