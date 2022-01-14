@@ -1,3 +1,67 @@
+/*
+Get some key material to use as input to the deriveKey method.
+The key material is a password supplied by the user.
+*/
+function getKeyMaterial() {
+    //TODO: read the password on install of the extension
+    const password = "my_password";
+    const enc = new TextEncoder();
+    return window.crypto.subtle.importKey(
+      "raw",
+      enc.encode(password),
+      {name: "PBKDF2"},
+      false,
+      ["deriveBits", "deriveKey"]
+    );
+  }
+    
+/*
+Given some key material and some random salt
+derive an AES-KW key using PBKDF2.
+*/
+function getKey(keyMaterial, salt) {
+    return window.crypto.subtle.deriveKey(
+      {
+        "name": "PBKDF2",
+        salt: salt,
+        "iterations": 100000,
+        "hash": "SHA-256"
+      },
+      keyMaterial,
+      { "name": "AES-GCM", "length": 256},
+      true,
+      [ "wrapKey", "unwrapKey" ]
+    );
+  }
+
+/*
+Wrap the given key.
+*/
+async function wrapCryptoKey(keyToWrap) {
+    // get the key encryption key
+    const keyMaterial = await getKeyMaterial();
+    salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const wrappingKey = await getKey(keyMaterial, salt);
+    iv = window.crypto.getRandomValues(new Uint8Array(12));
+  
+    return window.crypto.subtle.wrapKey(
+      "jwk",
+      keyToWrap,
+      wrappingKey,
+      {
+        name: "AES-GCM",
+        iv: iv
+      }
+    );
+}
+
+function bytesToArrayBuffer(bytes) {
+    const bytesAsArrayBuffer = new ArrayBuffer(bytes.length);
+    const bytesUint8 = new Uint8Array(bytesAsArrayBuffer);
+    bytesUint8.set(bytes);
+    return bytesAsArrayBuffer;
+}
+
 /** 
  * Promisifie local storage reads
  */
@@ -50,12 +114,25 @@ function formatAudUrl(url) {
     return /\/\*$/.test(url) ? url : (/\/$/.test(url) ? url + "*" : url + "/*");
 }
 
-
-
 const main = async () => {
     // The name of the local storage acting as state for the
     // saved credentials
     const CREDENTIAL_STATE_NAME = "SavedCredentials"
+
+    // create crypto keys for the holder 
+    window.crypto.subtle.generateKey({
+        name: "ECDSA",
+        namedCurve: "P-384"
+      },
+      true,
+      ["sign", "verify"]
+    )
+    .then((keyPair) => {
+        return wrapCryptoKey(keyPair.privateKey);
+    })
+    .then((wrapedKey) => {
+        console.log("WRAPED KEY = ", wrapedKey);
+    });
 
     // Init the auds as a map between the audience and the VCs path in the FS. 
     // This will give O(1) lookup for auds
@@ -103,12 +180,30 @@ const main = async () => {
             const credential = auds[audience];
             console.log("in onBeforeSendHeaders, credential = ", credential);
 
-            // Add the headers
-            e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
+            // // Add the auth header
+            // e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
+
+            // // Add the dpop header
+            // // 1. get the key pair from storage
+            // chrome.storage.local.get(["KeyPair"], (KeyPair) => {
+            //     // 2. get the public key as a jwk
+            //     KeyPair.then((key_pair) => {
+            //         console.log(key_pair)
+            //     })
+
+            //     window.crypto.subtle.exportKey("jwk", KeyPair.KeyPair.publicKey)
+            //     .then((pubKey_jwk) => {
+            //         console.log("public key as jwk = ", pubKey_jwk);
+            //     })
+            // })
+            
+            // window.crypto.subtle.sign()
             e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
 
             cache[audience] = credential
         }
+
+        console.log("REQUESTS E.HEADERS = ", e.requestHeaders)
     
         return {requestHeaders: e.requestHeaders};
     }
