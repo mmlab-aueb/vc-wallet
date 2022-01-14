@@ -8,8 +8,7 @@
 		"default_title": "Verifiable Credential Handler"
 	},
 	"background": {
-		"scripts": ["scripts/background.js"],
-		"type": "module"
+		"page": "html/background.html"
 	 },
 	"permissions": [
 		"activeTab",
@@ -17,6 +16,7 @@
     	"storage",
     	"webRequest",
 		"webRequestBlocking",
-		"<all_urls>"
+		"<all_urls>",
+		"declarativeNetRequest"
   	]
 }

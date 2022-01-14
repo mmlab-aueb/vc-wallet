@@ -1,171 +1,9 @@
 const DPOP_ALG = "ES384";
 
-/*
-Get some key material to use as input to the deriveKey method.
-The key material is a password supplied by the user.
-*/
-function getKeyMaterial() {
-    //TODO: read the password on install of the extension
-    const password = "my_password";
-    const enc = new TextEncoder();
-    return window.crypto.subtle.importKey(
-      "raw",
-      enc.encode(password),
-      {name: "PBKDF2"},
-      false,
-      ["deriveBits", "deriveKey"]
-    );
-  }
-    
-/*
-Given some key material and some random salt
-derive an AES-KW key using PBKDF2.
-*/
-function getKey(keyMaterial, salt) {
-    return window.crypto.subtle.deriveKey(
-      {
-        "name": "PBKDF2",
-        salt: salt,
-        "iterations": 100000,
-        "hash": "SHA-256"
-      },
-      keyMaterial,
-      { "name": "AES-GCM", "length": 256},
-      true,
-      [ "wrapKey", "unwrapKey" ]
-    );
-  }
-
-/*
-Wrap the given key.
-*/
-async function wrapCryptoKey(keyToWrap) {
-    // get the key encryption key
-    const keyMaterial = await getKeyMaterial();
-    salt = window.crypto.getRandomValues(new Uint8Array(16));
-    const wrappingKey = await getKey(keyMaterial, salt);
-    iv = window.crypto.getRandomValues(new Uint8Array(12));
-
-    // store salt and iv
-    chrome.storage.local.set({wrapMaterial: {
-        salt: JSON.stringify(Array.from(salt)),
-        iv: JSON.stringify(Array.from(iv))
-       }
-    }, () => {console.log("Saved wrapMaterial")})
-  
-    return window.crypto.subtle.wrapKey(
-      "jwk",
-      keyToWrap,
-      wrappingKey,
-      {
-        name: "AES-GCM",
-        iv: iv
-      }
-    );
-}
-
-async function unWrapCryptoKey(wrapedKey) {
-    const wrapMaterial = await readLocalStorage("wrapMaterial")
-    // console.log("SALT = ",  wrapMaterial.salt)
-    // console.log("VI = ",  wrapMaterial.iv)
-    const salt = bytesToArrayBuffer(JSON.parse(wrapMaterial.salt))
-    const iv = bytesToArrayBuffer(JSON.parse(wrapMaterial.iv))
-
-    const keyMaterial = await getKeyMaterial();
-    const wrappingKey = await getKey(keyMaterial, salt);
-
-    return window.crypto.subtle.unwrapKey(
-        "jwk",
-        wrapedKey,
-        wrappingKey,
-        {
-            name: "AES-GCM",
-            iv: iv
-        },
-        {
-            name: "ECDSA",
-            namedCurve: "P-384"
-        },
-        true,
-        ["sign"]
-    )
-
-}
-
-/** 
- * Promisifie local storage reads
- */
-const readLocalStorage = async (key) => {
-    return new Promise((resolve, reject) => {
-        chrome.storage.local.get([key], (res) => {
-            if (res[key] === undefined) {
-                reject();
-            } else {
-                resolve(res[key]);
-        }});
-    });
-};
-
-
 /**
- * Synchronously get the credential from the local file system
+ * Create a key pair on update (for debuging, will 
+ * be on install normally)
  */
-function fetchLocalResourceSync(url) {
-    const req = new XMLHttpRequest();
-
-    req.open('GET', url, false);
-
-    req.send(null);
-
-    console.log("in fetchLocalResourceSync, req = ", req)
-
-    if (req.readyState == 4) {
-        return req.responseText
-    } else {
-        throw Error("Cant load credential from " + url)
-        return null
-    }
-}
-
-/**
- * check if there is a saved credential with an audience for
- * which the given url is a sub url
- */
-function hasCredential(auds, url) {
-    for (aud of Object.keys(auds)) {
-        if (url.indexOf(aud) > -1) {
-            return aud;
-        }
-    }
-    return false;
-}
-
-function bytesToArrayBuffer(bytes) {
-    const bytesAsArrayBuffer = new ArrayBuffer(bytes.length);
-    const bytesUint8 = new Uint8Array(bytesAsArrayBuffer);
-    bytesUint8.set(bytes);
-    return bytesAsArrayBuffer;
-}
-
-function formatAudUrl(url) {
-    return /\/\*$/.test(url) ? url : (/\/$/.test(url) ? url + "*" : url + "/*");
-}
-
-function jsonToBase64url(json_data) {
-    return btoa(JSON.stringify(json_data))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-}
-
-function arrayBufferToBase64url(array_buffer) {
-    return btoa(Array.from(new Uint8Array(array_buffer),
-            b => String.fromCharCode(b)).join(''))
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=+$/, '');
-}
-
 chrome.runtime.onInstalled.addListener(
     (details) => {
         if (details.reason == "update") {
@@ -200,6 +38,7 @@ chrome.runtime.onInstalled.addListener(
         }
 })
 
+
 const main = async () => {
     // The name of the local storage acting as state for the
     // saved credentials
@@ -227,7 +66,6 @@ const main = async () => {
     } catch(err){
         console.log("Error whily trying to read the state", err)}
 
-    console.log("In main, auds = ", auds);
 
     /**
      * the callback for the request listener as a named function
@@ -317,6 +155,7 @@ const main = async () => {
     
         return {requestHeaders: e.requestHeaders};
     }
+    
 
     /**
      *  Add a HTTP request event listener
