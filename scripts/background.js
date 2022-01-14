@@ -1,3 +1,5 @@
+const DPOP_ALG = "ES384";
+
 /*
 Get some key material to use as input to the deriveKey method.
 The key material is a password supplied by the user.
@@ -43,6 +45,13 @@ async function wrapCryptoKey(keyToWrap) {
     salt = window.crypto.getRandomValues(new Uint8Array(16));
     const wrappingKey = await getKey(keyMaterial, salt);
     iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+    // store salt and iv
+    chrome.storage.local.set({wrapMaterial: {
+        salt: JSON.stringify(Array.from(salt)),
+        iv: JSON.stringify(Array.from(iv))
+       }
+    }, () => {console.log("Saved wrapMaterial")})
   
     return window.crypto.subtle.wrapKey(
       "jwk",
@@ -55,11 +64,32 @@ async function wrapCryptoKey(keyToWrap) {
     );
 }
 
-function bytesToArrayBuffer(bytes) {
-    const bytesAsArrayBuffer = new ArrayBuffer(bytes.length);
-    const bytesUint8 = new Uint8Array(bytesAsArrayBuffer);
-    bytesUint8.set(bytes);
-    return bytesAsArrayBuffer;
+async function unWrapCryptoKey(wrapedKey) {
+    const wrapMaterial = await readLocalStorage("wrapMaterial")
+    // console.log("SALT = ",  wrapMaterial.salt)
+    // console.log("VI = ",  wrapMaterial.iv)
+    const salt = bytesToArrayBuffer(JSON.parse(wrapMaterial.salt))
+    const iv = bytesToArrayBuffer(JSON.parse(wrapMaterial.iv))
+
+    const keyMaterial = await getKeyMaterial();
+    const wrappingKey = await getKey(keyMaterial, salt);
+
+    return window.crypto.subtle.unwrapKey(
+        "jwk",
+        wrapedKey,
+        wrappingKey,
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        {
+            name: "ECDSA",
+            namedCurve: "P-384"
+        },
+        true,
+        ["sign"]
+    )
+
 }
 
 /** 
@@ -110,29 +140,70 @@ function hasCredential(auds, url) {
     return false;
 }
 
+function bytesToArrayBuffer(bytes) {
+    const bytesAsArrayBuffer = new ArrayBuffer(bytes.length);
+    const bytesUint8 = new Uint8Array(bytesAsArrayBuffer);
+    bytesUint8.set(bytes);
+    return bytesAsArrayBuffer;
+}
+
 function formatAudUrl(url) {
     return /\/\*$/.test(url) ? url : (/\/$/.test(url) ? url + "*" : url + "/*");
 }
+
+function jsonToBase64url(json_data) {
+    return btoa(JSON.stringify(json_data))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+}
+
+function arrayBufferToBase64url(array_buffer) {
+    return btoa(Array.from(new Uint8Array(array_buffer),
+            b => String.fromCharCode(b)).join(''))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+}
+
+chrome.runtime.onInstalled.addListener(
+    (details) => {
+        if (details.reason == "update") {
+            // create crypto keys for the holder. Save the 
+            // pub key as a jwk and the encrypted private key.
+            window.crypto.subtle.generateKey({
+                name: "ECDSA",
+                namedCurve: "P-384"
+            },
+            true,
+            ["sign", "verify"]
+            )
+            .then(async (keyPair) => {
+                return {pubKey: keyPair.publicKey,
+                    wrapedKey: await wrapCryptoKey(keyPair.privateKey)};
+            })
+            .then((res) => {
+                console.log("pubKey = ", res.pubKey)
+                // save the public key as a jwk
+                window.crypto.subtle.exportKey("jwk", res.pubKey)
+                .then((pk_jwk) => {
+                    // encode the wrapedKey as json and save it
+                    const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(res.wrapedKey)));
+                    chrome.storage.local.set(
+                        {keysMaterial:
+                            {publicKey: pk_jwk,
+                            wrapedKey: wrapedKey_data}
+                        },
+                        ()=>{console.log("Saved Key: ", {publicKey: pk_jwk, wrapedKey: wrapedKey_data})})
+                });
+            });
+        }
+})
 
 const main = async () => {
     // The name of the local storage acting as state for the
     // saved credentials
     const CREDENTIAL_STATE_NAME = "SavedCredentials"
-
-    // create crypto keys for the holder 
-    window.crypto.subtle.generateKey({
-        name: "ECDSA",
-        namedCurve: "P-384"
-      },
-      true,
-      ["sign", "verify"]
-    )
-    .then((keyPair) => {
-        return wrapCryptoKey(keyPair.privateKey);
-    })
-    .then((wrapedKey) => {
-        console.log("WRAPED KEY = ", wrapedKey);
-    });
 
     // Init the auds as a map between the audience and the VCs path in the FS. 
     // This will give O(1) lookup for auds
@@ -154,8 +225,7 @@ const main = async () => {
             }
         }
     } catch(err){
-        console.log("Error whily trying to read the state", err)
-    }
+        console.log("Error whily trying to read the state", err)}
 
     console.log("In main, auds = ", auds);
 
@@ -180,30 +250,70 @@ const main = async () => {
             const credential = auds[audience];
             console.log("in onBeforeSendHeaders, credential = ", credential);
 
-            // // Add the auth header
-            // e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
-
-            // // Add the dpop header
-            // // 1. get the key pair from storage
-            // chrome.storage.local.get(["KeyPair"], (KeyPair) => {
-            //     // 2. get the public key as a jwk
-            //     KeyPair.then((key_pair) => {
-            //         console.log(key_pair)
-            //     })
-
-            //     window.crypto.subtle.exportKey("jwk", KeyPair.KeyPair.publicKey)
-            //     .then((pubKey_jwk) => {
-            //         console.log("public key as jwk = ", pubKey_jwk);
-            //     })
-            // })
-            
-            // window.crypto.subtle.sign()
-            e.requestHeaders.push({name: "dpop", value: "dpop_test_value"})
+            // Add the auth header
+            e.requestHeaders.push({name: "authorization", value: "Bearer " + credential})
 
             cache[audience] = credential
+
+            // Get the key with witch to create the DPoP
+            chrome.storage.local.get(["keysMaterial"], (res)=>{
+                // TODO: Check if the pubKey is correct
+                unWrapCryptoKey(
+                    bytesToArrayBuffer(
+                        JSON.parse(res.keysMaterial.wrapedKey)
+                        )
+                ).then(
+                    (privateKey) => {
+                        // jose to sign
+                        //      1. JWT header
+                        const pubKey = res.keysMaterial.publicKey;
+                        const dpop_header = {
+                            "typ":"dpop+jwt",
+                            "alg": DPOP_ALG,
+                            "jwk": {
+                            "kty": pubKey.kty,
+                            "x": pubKey.x,
+                            "y": pubKey.y,
+                            "crv": pubKey.crv
+                            }
+                        };
+                        
+                        //      2. JWT payload
+                        const dpop_payload = {
+                            "jti": self.crypto.randomUUID(),
+                            "htm": e.method,
+                            "htu":"https://server.example.com/token",
+                            "iat":Date.now()
+                        };
+
+                        //      3. dpop token without the signature
+                        const encodedHeader = jsonToBase64url(dpop_header);
+                        const encodedPayload = jsonToBase64url(dpop_payload);
+                        var dpop_token = encodedHeader + "." + encodedPayload;
+
+                        //      4. sign token and create jwt
+                        const encoder = new TextEncoder()
+                        const dpop_token_encoded = encoder.encode(dpop_token)
+                        window.crypto.subtle.sign(
+                            {
+                            name: "ECDSA",
+                            hash: {name: "SHA-384"},
+                            },
+                            privateKey,
+                            dpop_token_encoded
+                        ).then((signature) => {
+                            // base64url encode the signature
+                            const signature_encoded = arrayBufferToBase64url(signature);
+                            const dpop_jwt = dpop_token + "." + signature_encoded;
+                            console.log("in onBeforeSendHeaders, dpop = ", dpop_jwt);
+                            e.requestHeaders.push({name: "dpop", value: dpop_jwt})
+                        })
+                    }
+                )
+            })
         }
 
-        console.log("REQUESTS E.HEADERS = ", e.requestHeaders)
+        console.log("Request Headers = ", e.requestHeaders)
     
         return {requestHeaders: e.requestHeaders};
     }
