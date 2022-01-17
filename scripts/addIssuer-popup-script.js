@@ -16,7 +16,7 @@ if (save_issuer_btn) {
 
 		// add issuer to state
 		// get the saved issuers, append the new one and save the result
-		chrome.storage.local.get(["issuers"], function(result) {
+		browser.storage.local.get(["issuers"], function(result) {
 			const newIssuer = {"name": issuer_name,
 							   "url": issuer_url}
 
@@ -28,12 +28,11 @@ if (save_issuer_btn) {
 			} else {saved_issuers = [newIssuer]}
 			
 			//save the new issuer to the state			
-			chrome.storage.local.set({"issuers": saved_issuers},
+			browser.storage.local.set({"issuers": saved_issuers},
 				function() {
 					console.log("New issuer saved to state")
+					window.location.href = "../html/popup.html"
 				})
 		})
-
-		window.location.href = "../html/popup.html"
 	})
 }

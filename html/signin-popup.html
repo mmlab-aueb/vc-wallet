@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="../css/common-style.css">
+	<link rel="stylesheet" href="../css/adding-style.css">
+	<title>Credentials Handler</title>
+	<style  type="text/css">
+        body {
+            background-color: rgb(255, 241, 241);
+            width: 350px;
+            height: 430px;
+            position:  relative;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-right: 0px;
+            margin-bottom: 0px;
+			overflow: hidden;
+        }
+	</style>
+</head>
+<body>
+	<div class="divHeader">
+		<h1 class="header">Signin</h1>
+	</div>
+
+	<div class="mainDiv">
+		<div>
+			<form id = "signin_form_id">
+				<label for="name_input" class="label">Name</label><br>
+				<input type="text" id="name_input" placeholder="Your name..." autocomplete="off" required><br>
+				<label for="org_input" class="label">Organization</label><br>
+				<input type="text" id="org_input" placeholder="Your Organization..." autocomplete="off" required><br>
+				<label for="password_input" class="label">Password</label><br>
+				<input type="password" id="password_input" placeholder="Your password..." autocomplete="current-password" required><br>
+				<label for="conf_password_input" class="label">Confirm Password</label><br>
+				<input type="password" id="conf_password_input" placeholder="Confirm your password..." autocomplete="current-password" required><br>
+				<hr>
+				<button type="submit" class="addBtn" style="margin-top: 10px;" id = "submit_btn">Signin!</button>
+			</form>
+		</div>
+
+		<!-- <button type="button" class="addBtn" style="margin-top: 10px;" id = "login_btn">Login!</button> -->
+	</div>
+
+<script type="text/javascript" src="../scripts/signin-script.js"></script>
+<script type="text/javascript" src="../utils/crypto-utils.js"></script>
+
+</body>
+</html>

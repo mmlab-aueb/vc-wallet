@@ -4,7 +4,7 @@ document.getElementById("VCs_list_ul").addEventListener("click",
     const clicked_vc = event.target.innerText;
 
     // get SavedCredentials state
-    chrome.storage.local.get(["SavedCredentials"], function(res){
+    browser.storage.local.get(["SavedCredentials"], function(res){
       if (res.SavedCredentials && res.SavedCredentials.length>0){
         // TODO: using the id of the <li> HTML ellement to retreive the state
         // of the cliced VC. Is that secure?? maybe change the state from a list
@@ -33,7 +33,7 @@ function DOMaddVC(newVC, HTML_li_id, vc_ul) {
 // read the saved issuers and vcs and display them in the popup
 const main = () => {
   // read and display the saved VCs state
-  chrome.storage.local.get(["SavedCredentials"], function(res) {
+  browser.storage.local.get(["SavedCredentials"], function(res) {
     console.log("credentials-script.js: read SavedCredentials state ", res.SavedCredentials)
 
     if (res.SavedCredentials && res.SavedCredentials.length>0){

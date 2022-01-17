@@ -5,7 +5,7 @@ document.getElementById("Issuers_list_ul").addEventListener("click",
     // save the issuer name to a variable in local storage and open the getVC_popup.html
     // Get the clicked issuers url
     const issuerConf = clicked_issuer.split(" : ", 2) //TODO: Check for escaping characters
-    chrome.storage.local.set({"issuersURL": issuerConf[1]})
+    browser.storage.local.set({"issuersURL": issuerConf[1]})
     window.location.href = "../html/getVC_popup.html"
 });
 
@@ -27,7 +27,7 @@ function DOMaddIssuer(issuer_name, issuer_URL) {
 // read the saved issuers and vcs and display them in the popup
 const main = () => {
     // read and display the issuers state
-    chrome.storage.local.get(["issuers"], function(res) {
+    browser.storage.local.get(["issuers"], function(res) {
       console.log("popup-script.js: read issuers state ", res.issuers);
   
       // have to "re-write" all the issuers because the popup resets on each click

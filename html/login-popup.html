@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="../css/common-style.css">
+	<link rel="stylesheet" href="../css/adding-style.css">
+	<title>Credentials Handler</title>
+	<style  type="text/css">
+        body {
+            background-color: rgb(255, 241, 241);
+            width: 350px;
+            height: 240px;
+            position:  relative;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-right: 0px;
+            margin-bottom: 0px;
+            overflow: hidden;
+        }
+	</style>
+</head>
+<body>
+	<div class="divHeader">
+		<h1 class="header">Login</h1>
+	</div>
+
+	<div class="mainDiv">
+		<div>
+			<form id = "login_form_id">
+				<label for="password_input">Password</label><br>
+				<input type="password" id="password_input" placeholder="Your password..." autocomplete="current-password" required><br>
+				<button type="submit" class="addBtn" style="margin-top: 10px;" id = "login_submit_btn">Login!</button>
+			</form>
+		</div>
+
+		<!-- <button type="button" class="addBtn" style="margin-top: 10px;" id = "login_btn">Login!</button> -->
+	</div>
+
+<script type="text/javascript" src="../scripts/login-script.js"></script>
+<script type="text/javascript" src="../utils/crypto-utils.js"></script>
+
+</body>
+</html>

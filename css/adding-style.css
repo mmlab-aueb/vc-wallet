@@ -1,16 +1,16 @@
 body {
     background-color: rgb(255, 241, 241);
     width: 350px;
-    height: 290px;
+    height: 300px;
     position:  relative;
     margin-top: 0px;
     margin-left: 0px;
     margin-right: 0px;
     margin-bottom: 0px;
+    overflow: hidden;
 }
 
 .header {
-    font-family: serif;
     margin-top: 20px;
     padding: 5px;
     background-color: transparent
@@ -19,12 +19,17 @@ body {
 .divHeader {
     padding: 0px;
     text-align: center;
-    color: rgb(0, 0, 0);
+    color: rgba(11, 9, 15, 0.911);
     background-color: transparent;
     font-size: 12px;
     margin-top: 0px;
     padding-top: 0px;
     height: 40px;
+}
+
+.label{
+    font-size: 15px;
+    color: rgba(13, 11, 20, 0.877);
 }
 
 .mainDiv {

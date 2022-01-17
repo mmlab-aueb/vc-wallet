@@ -9,11 +9,10 @@ document.getElementById("back_btn").addEventListener("click", function(){
 // credentialsState = {SavedCredentials: ["iss", "type", "aud", "downloadId", "filePath"]}
 document.getElementById("getVC_btn").addEventListener("click", function(){
 	// read the issuers url and the wallet pass
-	const request = {"IssuingURL": document.getElementById("issuer_url_input").value,
-					 "walletPass": document.getElementById("wallet_pass_input").value};
-
 	// POST request
-	const credential = fetchCredential(request);
+	const _request = {"IssuingURL": document.getElementById("issuer_url_input").value,
+					 "walletPass": document.getElementById("wallet_pass_input").value}
+	const credential = fetchCredential(_request);
 
 	// The new values to save as state
 	const newVCstate = {}
@@ -35,7 +34,7 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 
 		newVCstate.payload = data.vc;
 
-		chrome.storage.local.get(["SavedCredentials"], (res) => {
+		browser.storage.local.get(["SavedCredentials"], (res) => {
 			let state = [];
 			if (res.SavedCredentials) {
 				state = res.SavedCredentials;};
@@ -44,7 +43,7 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 		   state.push(newVCstate);
 
 		   // If the credential is for an issuer that is not already saved, save the issuer
-		   chrome.storage.local.get(["issuers"], (res) => {
+		   browser.storage.local.get(["issuers"], (res) => {
 			   console.log("issuers res = ", res);
 			   let issuers = res.issuers ? res.issuers : [];
 			   let found = false;
@@ -55,14 +54,14 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 
 			   if (!found) {
 				   const issURL = new URL(newVCstate.iss);
-				   issuers.push({name: issURL.hostname, url: newVCstate.iss});
-				   chrome.storage.local.set({"issuers": issuers}, () => {
+				   issuers.push({name: issURL.hostname, url: _request.IssuingURL});
+				   browser.storage.local.set({"issuers": issuers}, () => {
 					   console.log("getVC-popup-script.js: added a new issuer to the issuers state")
 				   })
 			   }
 		   })
 
-		   chrome.storage.local.set({"SavedCredentials": state}, () => {
+		   browser.storage.local.set({"SavedCredentials": state}, () => {
 			   console.log('getVC-popup-script.js: Updated local state', state);
 			   window.location.href = "../html/getVC_success.html"
 			});
@@ -80,7 +79,7 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 // get the "issuersURL" local variable and if not empty (is only set when a issuer element 
 // in the Issuers_list_ul of popup.html is clicked) set it as defaul value to the issuers url 
 // input
-chrome.storage.local.get(["issuersURL"], function(res) {
+browser.storage.local.get(["issuersURL"], function(res) {
 	console.log(res)
 	if (res.issuersURL && res.issuersURL !== null) {
 		//TODO: check if res is valid url
@@ -88,7 +87,7 @@ chrome.storage.local.get(["issuersURL"], function(res) {
 	}
 })
 //set the "issuersURL" to null again
-chrome.storage.local.set({"issuersURL": null})
+browser.storage.local.set({"issuersURL": null})
 
 // POST the issuing end point for a credential, returns a promise
 async function fetchCredential(request) { //TODO: SECURE THAT <<<<<<<<<<<<<<

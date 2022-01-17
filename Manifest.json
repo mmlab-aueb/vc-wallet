@@ -16,7 +16,6 @@
     	"storage",
     	"webRequest",
 		"webRequestBlocking",
-		"<all_urls>",
-		"declarativeNetRequest"
+		"<all_urls>"
   	]
 }
