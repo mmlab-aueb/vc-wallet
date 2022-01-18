@@ -11,7 +11,7 @@ document.getElementById("VCs_list_ul").addEventListener("click",
         // to a map??
         const VCstate = res.SavedCredentials[parseInt(event.target.id)];
         const display = {Issuer: VCstate.iss, Audience: VCstate.aud, Type: VCstate.type}
-        alert(JSON.stringify(display, null, 2) + event.target.id)
+        alert(JSON.stringify(display, null, 2))
       };
 
     })
@@ -58,10 +58,11 @@ function DOMaddVC(newVC, HTML_li_id, vc_ul) {
   const delete_img = document.createElement("img")
   delete_img.setAttribute("src", "../assets/delete_icon.png")
   delete_img.setAttribute("class", "delBtn")
-  delete_img.setAttribute("style", "vertical-align: middle;")
+  delete_img.setAttribute("style", "vertical-align: middle; margin: 0; padding:0")
 
   button.appendChild(delete_img);
 
+  // button.setAttribute("class", "delBtn")
   button.setAttribute("style", "margin: 0; padding:0; float: right")
   button.setAttribute("style", "vertical-align: middle;")
 
