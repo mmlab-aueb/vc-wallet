@@ -28,7 +28,6 @@ function DOMaddIssuer(issuer_name, issuer_URL) {
 const main = () => {
     // read and display the issuers state
     browser.storage.local.get(["issuers"], function(res) {
-      console.log("popup-script.js: read issuers state ", res.issuers);
   
       // have to "re-write" all the issuers because the popup resets on each click
       if (res.issuers && res.issuers.length>0) {

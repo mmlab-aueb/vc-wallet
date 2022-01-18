@@ -30,7 +30,6 @@ if (save_issuer_btn) {
 			//save the new issuer to the state			
 			browser.storage.local.set({"issuers": saved_issuers},
 				function() {
-					console.log("New issuer saved to state")
 					window.location.href = "../html/popup.html"
 				})
 		})

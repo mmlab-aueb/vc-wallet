@@ -1,6 +1,6 @@
 body {
   background-color: rgb(59, 56, 56);
-  width: 570px;
+  width: 630px;
   height: 245px;
   /* min-width: 700px;
   max-width:  100%; */
@@ -117,19 +117,27 @@ div.botomBar {
 }
 
 li.saved {
+  display: flex;
+  justify-content: space-between;
     list-style-type: none;
-    width:  350px;
-    max-width: 500px;
+    width:  400px;
+    max-width: 560px;
+    height: 27px;
     margin-bottom:2px;
+    margin-top:0px;
     margin-right: 0px;
-    padding-top: 5px;
-    padding-bottom: 5px;
+    padding-top: 2px;
+    padding-bottom: 2px;
     padding-left: 10px;
     color: #ffffff;
+    vertical-align: middle;
+    line-height: 27px;
+    font-size: 15px;
 }
 
 li.saved:nth-child(odd) {
-    background-color: #f557429c;
+    /* background-color: #f557429c; */
+    background-color: #1b79289c;
     cursor: pointer;
     width: 100%;
 }

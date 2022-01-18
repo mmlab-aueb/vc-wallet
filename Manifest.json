@@ -11,8 +11,6 @@
 		"page": "html/background.html"
 	 },
 	"permissions": [
-		"activeTab",
-    	"downloads",
     	"storage",
     	"webRequest",
 		"webRequestBlocking",

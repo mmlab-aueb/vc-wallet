@@ -14,7 +14,9 @@ function bytesToArrayBuffer(bytes) {
  * that url does not end with "/*"
  */
 function formatAudUrl(url) {
-    return /\/\*$/.test(url) ? url : (/\/$/.test(url) ? url + "*" : url + "/*");
+    const url_start_formed = (/^http:\/\//.test(url) || /^https:\/\//.test(url)) ? url : "*://*."+url
+    return /\/\*$/.test(url_start_formed) ? url_start_formed : (/\/$/.test(url_start_formed) ? 
+                        url_start_formed + "*" : url_start_formed + "/*");
 }
 
 

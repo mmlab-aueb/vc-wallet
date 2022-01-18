@@ -19,12 +19,9 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 
 	// resolve credential and save to file system
 	credential.then((data) => {
-		console.log("Credential to save: ", data);
 		
 		// decode credential JWT and save iss and type to the state
-		vcJWTpayload = parseJwt(data.vc)
-
-		console.log("Credential payload to save: ", vcJWTpayload)
+		vcJWTpayload = parseJwt(data.vc) 
 
 		if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
 			newVCstate.iss = vcJWTpayload.iss;
@@ -44,7 +41,6 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 
 		   // If the credential is for an issuer that is not already saved, save the issuer
 		   browser.storage.local.get(["issuers"], (res) => {
-			   console.log("issuers res = ", res);
 			   let issuers = res.issuers ? res.issuers : [];
 			   let found = false;
 			   for (issuer of issuers) {
@@ -56,13 +52,11 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 				   const issURL = new URL(newVCstate.iss);
 				   issuers.push({name: issURL.hostname, url: _request.IssuingURL});
 				   browser.storage.local.set({"issuers": issuers}, () => {
-					   console.log("getVC-popup-script.js: added a new issuer to the issuers state")
 				   })
 			   }
 		   })
 
 		   browser.storage.local.set({"SavedCredentials": state}, () => {
-			   console.log('getVC-popup-script.js: Updated local state', state);
 			   window.location.href = "../html/getVC_success.html"
 			});
 		   })
@@ -80,7 +74,6 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 // in the Issuers_list_ul of popup.html is clicked) set it as defaul value to the issuers url 
 // input
 browser.storage.local.get(["issuersURL"], function(res) {
-	console.log(res)
 	if (res.issuersURL && res.issuersURL !== null) {
 		//TODO: check if res is valid url
 		document.getElementById("issuer_url_input").value = res.issuersURL
@@ -91,7 +84,6 @@ browser.storage.local.set({"issuersURL": null})
 
 // POST the issuing end point for a credential, returns a promise
 async function fetchCredential(request) { //TODO: SECURE THAT <<<<<<<<<<<<<<
-	console.log(request.IssuingURL);
 	const POSTconfig = {
 		credentials: 'include',
 		headers: {
@@ -104,7 +96,6 @@ async function fetchCredential(request) { //TODO: SECURE THAT <<<<<<<<<<<<<<
     return fetch( request.IssuingURL, POSTconfig)
     .then(res => res.json())
     .then(data => {
-    	console.log("data from POSTing the IssuingURL = ", data);
     	return data});
 }
 
