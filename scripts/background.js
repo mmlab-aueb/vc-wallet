@@ -128,50 +128,7 @@ const main = async () => {
             const pubKey = keys.pubKey;
             const wrapedKey = keys.wrapedKey;
 
-            //  dpop creation
-            //      1. JWT header
-            const dpop_header = {
-                "typ":"dpop+jwt",
-                "alg": DPOP_ALG,
-                "jwk": {
-                    "kty": pubKey.kty,
-                    "x": pubKey.x,
-                    "y": pubKey.y,
-                    "crv": pubKey.crv
-                }
-            };
-            
-            //      2. JWT payload
-            const dpop_payload = {
-                "jti": self.crypto.randomUUID(),
-                "htm": e.method,
-                "htu": audience,
-                "iat": Date.now()
-            };
-
-            //      3. dpop token without the signature
-            const encodedHeader = jsonToBase64url(dpop_header);
-            const encodedPayload = jsonToBase64url(dpop_payload);
-            var dpop_token = encodedHeader + "." + encodedPayload;
-
-            //      4. create jws and add dpop header
-            const encoder = new TextEncoder()
-            const dpop_token_encoded = encoder.encode(dpop_token)
-
-
-            const signature = await window.crypto.subtle.sign(
-                                        {
-                                        name: "ECDSA",
-                                        hash: {name: "SHA-384"},
-                                        },
-                                        await unWrapCryptoKey(
-                                            bytesToArrayBuffer(JSON.parse(wrapedKey)),
-                                            logedInInfo),
-                                        dpop_token_encoded
-                                    )
-
-            const signature_encoded = arrayBufferToBase64url(signature);
-            const dpop_jwt = dpop_token + "." + signature_encoded;
+            const dpop_jwt = await dpop(pubKey, e, audience, DPOP_ALG, wrapedKey, logedInInfo)
             // add dpop header
             e.requestHeaders.push({name: "dpop", value: dpop_jwt})
             }

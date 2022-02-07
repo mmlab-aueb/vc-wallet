@@ -1,3 +1,6 @@
+const DPOP_ALG = "ES384";
+var logedInInfo = "my_pass";
+
 // Event Listeners
 // Go back btn
 document.getElementById("back_btn").addEventListener("click", function(){
@@ -83,19 +86,30 @@ browser.storage.local.get(["issuersURL"], function(res) {
 browser.storage.local.set({"issuersURL": null})
 
 // POST the issuing end point for a credential, returns a promise
-async function fetchCredential(request) { //TODO: SECURE THAT <<<<<<<<<<<<<<
+async function fetchCredential(request) {
+	const _htm = "POST"
+
+	//Get DPoP for Issuer
+	const keys = await browser.storage.local.get(["pubKey", "wrapedKey"]);
+	const pubKey = keys.pubKey;
+	const wrapedKey = keys.wrapedKey;
+	const dpop_jwt = await dpop(pubKey, {method: _htm}, request.IssuingURL, DPOP_ALG, wrapedKey, logedInInfo)
+	console.log("FETCHING WITH PUB KEY = ", pubKey)
+
 	const POSTconfig = {
 		credentials: 'include',
 		headers: {
 	    	Authorization: 'Basic '+btoa(request.walletPass),
+			dpop: dpop_jwt,
 	        'Content-Type': 'application/x-www-form-urlencoded'
 	        },
 	    body: "grant_type=client_credentials",
-	    method: 'POST'};
+	    method: _htm};
 
     return fetch( request.IssuingURL, POSTconfig)
     .then(res => res.json())
     .then(data => {
+		console.log("RECEIVED CREDENTIAL = ", data)
     	return data});
 }
 
