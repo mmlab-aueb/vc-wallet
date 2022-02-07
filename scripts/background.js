@@ -36,8 +36,8 @@ const main = async () => {
 
     // Init the auds as a map between the audience and the VCs path in the FS. 
     // This will give O(1) lookup for auds
-    const auds = {};
-    const urlsToCheck = [];
+    var auds = {};
+    var urlsToCheck = [];
     const cache = {};
 
     // Get the state
@@ -101,7 +101,9 @@ const main = async () => {
             const credential = auds[audience];
 
             // Add the auth header
-            e.requestHeaders.push({name: "authorization", value: "Bearer " + credential});
+            if (credential) {
+                e.requestHeaders.push({name: "authorization", value: "Bearer " + credential});
+            }
 
             cache[audience] = credential
 
@@ -183,8 +185,8 @@ const main = async () => {
      */
     function addRequestListener(auds, urlsToCheck, cache) {
         //HTTP GET Request event listener
-        browser.webRequest.onBeforeSendHeaders.addListener(
-            reqListenerCallback,
+        browser.webRequest.onBeforeSendHeaders.addListener((e) => {
+            return reqListenerCallback(e)},
             {
                 // only listen for the protected resources that there is a vc with that audience
                 urls: urlsToCheck
@@ -199,20 +201,28 @@ const main = async () => {
 
     // Update the state when needed (i.e., when a new vc is saved)
     browser.storage.onChanged.addListener((changes, nameSpace) => {
-        console.log("State Changes: ", changes)
-        //auds = {}
         for (const [key, {newValue, oldValue}] of Object.entries(changes)) {
-            if ((key == CREDENTIAL_STATE_NAME) && (nameSpace == "local") && (newValue)) {
-                for (const el of newValue){
-                    auds[el.aud] = el.payload
-                    urlsToCheck.push(formatAudUrl(el.aud))
-                    // remove the onBeforeSendHeaders listener and re-add him with
-                    // the new filtering rules (urlsToCheck) and audiences (auds)
-                    try{
-                        browser.webRequest.onBeforeSendHeaders.removeListener(reqListenerCallback);
-                    } catch(e) {console.log("in background.js, on browser.storage.onChanged, error = ", e)}
-                    console.log("Add new listener with urlsToChack: ", urlsToCheck)
-                    addRequestListener(auds, urlsToCheck, cache)
+            if ((key == CREDENTIAL_STATE_NAME) && (nameSpace == "local")) {
+
+                for (const key of Object.keys(auds)){
+                    delete auds[key]
+                }
+
+                if (newValue) {
+                    for (const el of newValue){
+                        auds[el.aud] = el.payload
+                        urlsToCheck.push(formatAudUrl(el.aud))
+                    }
+                }
+
+                // remove the onBeforeSendHeaders listener and re-add him with
+                // the new filtering rules (urlsToCheck) and audiences (auds)
+                try{
+                    browser.webRequest.onBeforeSendHeaders.removeListener(reqListenerCallback);
+                } catch(e) {console.log("in background.js, on browser.storage.onChanged, error = ", e)}
+
+                if (urlsToCheck.length > 0) {
+                    addRequestListener(auds, urlsToCheck, cache);
                 }
             }
         }
