@@ -18,53 +18,49 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 	const credential = fetchCredential(_request);
 
 	// The new values to save as state
-	const newVCstate = {}
+	
 
 	// resolve credential and save to file system
-	credential.then((data) => {
-		
-		// decode credential JWT and save iss and type to the state
-		vcJWTpayload = parseJwt(data.vc) 
+	credential.then(async (data) => {
+		var vcs = data.vc;
+		for (vc of vcs){ 
+			var newVCstate = {}
+			// decode credential JWT and save iss and type to the state
+			vcJWTpayload = parseJwt(vc)
+			if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
+				newVCstate.iss = vcJWTpayload.iss;
+				newVCstate.type = vcJWTpayload.vc.type;
+				newVCstate.aud = vcJWTpayload.aud
+			}
 
-		if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
-			newVCstate.iss = vcJWTpayload.iss;
-			newVCstate.type = vcJWTpayload.vc.type;
-			newVCstate.aud = vcJWTpayload.aud
+			newVCstate.payload = data.vc;
+			console.log(newVCstate)
+			await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {
+				let state = res.SavedCredentials? res.SavedCredentials:[];		
+				state.push(newVCstate);
+				await browser.storage.local.set({"SavedCredentials": state})
+			})	
+			
+			// If the credential is for an issuer that is not already saved, save the issuer
+			await browser.storage.local.get(["issuers"]).then(async (res) => {
+				let issuers = res.issuers ? res.issuers : [];
+				let found = false;
+				for (issuer of issuers) {
+					const issuerUrl = issuer.url;
+					if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
+				}
+
+				if (!found) {
+					const issURL = new URL(newVCstate.iss);
+					issuers.push({name: issURL.hostname, url: _request.IssuingURL});
+					await browser.storage.local.set({"issuers": issuers})
+				}
+			})
+				
+
 		}
-
-		newVCstate.payload = data.vc;
-
-		browser.storage.local.get(["SavedCredentials"], (res) => {
-			let state = [];
-			if (res.SavedCredentials) {
-				state = res.SavedCredentials;};
-		   
-		   // update state and return to main popup
-		   state.push(newVCstate);
-
-		   // If the credential is for an issuer that is not already saved, save the issuer
-		   browser.storage.local.get(["issuers"], (res) => {
-			   let issuers = res.issuers ? res.issuers : [];
-			   let found = false;
-			   for (issuer of issuers) {
-				   const issuerUrl = issuer.url;
-				   if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
-			   }
-
-			   if (!found) {
-				   const issURL = new URL(newVCstate.iss);
-				   issuers.push({name: issURL.hostname, url: _request.IssuingURL});
-				   browser.storage.local.set({"issuers": issuers}, () => {
-				   })
-			   }
-		   })
-
-		   browser.storage.local.set({"SavedCredentials": state}, () => {
-			   window.location.href = "../html/getVC_success.html"
-			});
-		   })
-
- 	}).catch(error => {
+		window.location.href = "../html/getVC_success.html"
+	}).catch(error => {
 		 alert("Resolving Credential Error")
 		 console.log("getVC-popup-script.js: Error: ", error)
 	 });
@@ -114,7 +110,7 @@ async function fetchCredential(request) {
 }
 
 
-const parseJwt = (token) => {
+function parseJwt (token) {
     try {
       return JSON.parse(atob(token.split('.')[1]));
     } catch (e) {
