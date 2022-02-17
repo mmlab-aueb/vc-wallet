@@ -7,13 +7,21 @@ var _ORG = "AUEB";
 
 browser.storage.local.set({userInfo: {username: _USER, org: _ORG}}, ()=>{})
 
-browser.runtime.onInstalled.addListener(
-    (details) => {
-        if (details.reason == "update" || details.reason == "install") {
-            generateKeys(logedInInfo)
-        }
-    }
-)
+// browser.runtime.onInstalled.addListener(
+//     (details) => {
+//         if (details.reason == "update" || details.reason == "install") {
+            
+//             const keys = generateKeys(logedInInfo)
+
+//             keys.then(([pk_jwk, wraped_key]) => {
+//                 const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
+//                 browser.storage.local.set({keys: {pubKey: pk_jwk, wrapedKey: wrapedKey_data}})
+//                 }
+
+//             ).catch((e)=>{console.log("Error in creating client keys: ", e)})
+//         }
+//     }
+// )
 
 
 async function awaitForPassword() {
@@ -46,9 +54,14 @@ const main = async () => {
         SavedCredentials = await readLocalStorage(CREDENTIAL_STATE_NAME);
 
         for (const el of SavedCredentials){
-            if ((auds[el.aud] == undefined) && (!(el.payload == undefined))){
-                auds[el.aud] = el.payload;
-                urlsToCheck.push(formatAudUrl(el.aud));
+            if  (!(el.payload == undefined)) {
+                const _vc = {payload: el.payload, keys: el.keys}
+                if (auds[el.aud] == undefined){
+                    auds[el.aud] = [_vc];
+                    urlsToCheck.push(formatAudUrl(el.aud));
+                } else {
+                    auds[el.aud].push(_vc)
+                }
             }
         }
     } catch(err){
@@ -65,11 +78,11 @@ const main = async () => {
 
         // read the password
         if (request.logedInInfo.password) {
-        if(!logedInInfo) {
-            logedInInfo = request.logedInInfo.password;
+            if(!logedInInfo) {
+                logedInInfo = request.logedInInfo.password;
+                }
+            //logedInInfo = request.logedInInfo.password;
             }
-        //logedInInfo = request.logedInInfo.password;
-        }
 
         // save the user info
         if (request.logedInInfo.username && request.logedInInfo.org) {
@@ -98,11 +111,15 @@ const main = async () => {
                 // TODO: break if user presses cancel
                 //alert(e.url + " Reqests a Credential");
             }
-            const credential = auds[audience];
+            const credentials = auds[audience];
+            
+            // TODO: How to choose what credential from the list to send??
+            const credential = credentials[0]
 
             // Add the auth header
             if (credential) {
-                e.requestHeaders.push({name: "authorization", value: "Bearer " + credential});
+                e.requestHeaders.push({name: "authorization", 
+                                       value: "Bearer " + credential.payload});
             }
 
             cache[audience] = credential
@@ -124,11 +141,16 @@ const main = async () => {
                 //TODO: What if the user closes the popup without supling a password
             }
 
-            const keys = await browser.storage.local.get(["pubKey", "wrapedKey"]);
+            const keys = credential.keys;
             const pubKey = keys.pubKey;
             const wrapedKey = keys.wrapedKey;
 
-            const dpop_jwt = await dpop(pubKey, e, audience, DPOP_ALG, wrapedKey, logedInInfo)
+            const dpop_jwt = await dpop(pubKey,
+                 wrapedKey,
+                 e.method, 
+                 audience, 
+                 DPOP_ALG,  
+                 logedInInfo)
             // add dpop header
             e.requestHeaders.push({name: "dpop", value: dpop_jwt})
             }

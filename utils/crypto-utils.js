@@ -93,31 +93,28 @@ async function unWrapCryptoKey(wrapedKey, password) {
 
 
 function generateKeys(pass) {
-  window.crypto.subtle.generateKey({
-    name: "ECDSA",
-    namedCurve: "P-384"
-  },
-  true,
-  ["sign", "verify"]
-  )
-  .then((keyPair) => {
-      window.crypto.subtle.exportKey("jwk", keyPair.publicKey)
-      .then((pk_jwk) => {
-          browser.storage.local.set({pubKey: pk_jwk})
-      })
-      const wrapPromise = wrapCryptoKey(keyPair.privateKey, pass);
+  return window.crypto.subtle.generateKey({
+      name: "ECDSA",
+      namedCurve: "P-384"
+    },
+    true,
+    ["sign", "verify"]
+    )
+    .then((keyPair) => {
+        const jwkPromise = window.crypto.subtle.exportKey("jwk", keyPair.publicKey)
+        const wrapPromise = wrapCryptoKey(keyPair.privateKey, pass);
 
-      wrapPromise.then((wraped_key) => {
-              // save the public key as a jwk
-              const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
-              browser.storage.local.set(
-                  {wrapedKey: wrapedKey_data},
-                  ()=>{
-                      // browser.browserAction.setPopup(
-                      //     {popup: "../html/popup.html"},
-                      //     ()=>{});
-                      // window.location.href = "../html/popup.html";
-                  })
-          }).catch((e)=>{console.log("Error in wrapCryptoKey: ", e)})
-  })
+        return Promise.all([jwkPromise, wrapPromise])
+        // .then(
+        //   ([pk_jwk, wraped_key]) => {
+        //     // console.log("PROMIS ALL RESULT = ", res)
+        //     // const pk_jwk = ""
+        //     // const wraped_key = ""
+        //     const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
+        //     browser.storage.local.set({keys: {pubKey: pk_jwk, wrapedKey: wrapedKey_data}})
+        //   }
+        // ).catch((e)=>{console.log("Error in creating client keys: ", e)})
+    })
 }
+
+//{SavedCredentials: [{vc:..., pubKey:..., wrappedKey:...},...]}

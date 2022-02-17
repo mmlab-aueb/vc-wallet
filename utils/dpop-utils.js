@@ -5,7 +5,7 @@
  * @param {*} requestEvent the HTTP request in wich to add the dpop value
  * @param {*} audience the URL of the dpop recepient
  */
-async function dpop(pubKey, requestEvent, audience, dpop_alg, wrapedKey, logedInInfo) {
+async function dpop(pubKey, wrapedKey, method, audience, dpop_alg, logedInInfo) {
     //  dpop creation
     //      1. JWT header
     const dpop_header = {
@@ -22,7 +22,7 @@ async function dpop(pubKey, requestEvent, audience, dpop_alg, wrapedKey, logedIn
     //      2. JWT payload
     const dpop_payload = {
         "jti": window.crypto.randomUUID(), // self.crypto.randomUUID()
-        "htm": requestEvent.method,
+        "htm": method,
         "htu": audience,
         "iat": Date.now()
     };
@@ -43,7 +43,9 @@ async function dpop(pubKey, requestEvent, audience, dpop_alg, wrapedKey, logedIn
                                 hash: {name: "SHA-384"},
                                 },
                                 await unWrapCryptoKey(
-                                    bytesToArrayBuffer(JSON.parse(wrapedKey)),
+                                    bytesToArrayBuffer( 
+                                        JSON.parse(wrapedKey)
+                                    ),
                                     logedInInfo),
                                 dpop_token_encoded
                             )
