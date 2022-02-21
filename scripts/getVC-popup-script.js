@@ -2,6 +2,7 @@
 
 const DPOP_ALG = "ES384";
 var logedInInfo = "my_pass";
+var _SignWith = "cloudKMS";
 
 // Event Listeners
 // Go back btn
@@ -12,86 +13,170 @@ document.getElementById("back_btn").addEventListener("click", function(){
 
 // send POST request for VC and update the local state
 // credentialsState = {SavedCredentials: ["iss", "type", "aud", "downloadId", "filePath"]}
-document.getElementById("getVC_btn").addEventListener("click", function(){
+document.getElementById("getVC_btn").addEventListener("click", async function(){
 	// send message to background script to ask for credential??
 
-	// read the issuers url and the wallet pass
+	// read the issuers url and the wallet pass and request a credential
 	// POST request
 	const _request = {
 		"method": "POST",
 		"IssuingURL": document.getElementById("issuer_url_input").value,
 		"walletPass": document.getElementById("wallet_pass_input").value}
 
-	// Generate keys and use them to create a dpop
-	const keys = generateKeys(logedInInfo);
+	if (_SignWith == "local") {
+		// Generate keys locally and use them to create a dpop
+		const keys = generateKeys(logedInInfo);
+		keys.then(async ([pk_jwk, wraped_key]) => {
+			// The encrypted private key
+			const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
+			// DPoP
+			const dpop_jwt = await dpop(
+				pk_jwk, 
+				wrapedKey_data,
+				_request.method, 
+				_request.IssuingURL, 
+				DPOP_ALG, 
+				logedInInfo);
 
-	keys.then(async ([pk_jwk, wraped_key]) => {
-		const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
+			// save the dpop value
+			await browser.storage.local.set({dpop: dpop_jwt}, () => {console.log("Sved dpop")})
+		})
+	} else if (_SignWith == "cloudKMS") {
+		console.log("Requesting Cloud KMS signature")
+		// hard coded JWK. TODO: Request the jwk from the kms
+		const pubJWK =  {
+		    kty: 'EC',
+		    crv: 'P-256',
+		    x: 'y3CYg1dG8m26_H5ME4OVtprm0FbSvQNJg40hEFTo7gc',
+		    y: '9EDHWviK-ZCjtw2ueE3tan-etPaKQ1YJ_XC2_-uMcLo'
+		}
 
-		const dpop_jwt = await dpop(
-			pk_jwk, 
-			wrapedKey_data,
-			_request.method, 
-			_request.IssuingURL, 
-			DPOP_ALG, 
-			logedInInfo);
+		// read access token for the KMS api
+		const resCloudKms = await browser.storage.local.get(["cloudKMS"]);
+		const access_token = resCloudKms.cloudKMS.access_token
+
+		// Request the Pub Key
+		const PubKeyReqBody = JSON.stringify(
+			{
+				project: "aueb-ztvc",
+				locations: "global",
+				keyRings: "test_key_ring",
+				cryptoKeys: "test_key_rsa_raw",
+				cryptoKeyVersions: 1,
+				access_token: access_token
+			}
+		)
 		
-		_request["dpop"] = dpop_jwt
+		await fetch("http://127.0.0.1:3002/pubKey",
+			{
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				method: "POST",
+				body: PubKeyReqBody
+			}
+		).then((res) => {console.log("FETCHING PUB KEY = ", res)})
+		
+		const dpopTokenEncoded = await dpop_token(
+			pubJWK,
+			_request.method, 
+			_request.IssuingURL,
+			"ES256")
+		console.log("DPOP TOKEN = ", dpopTokenEncoded)
 
-		const credential = fetchCredential(_request);
+		const encoder = new TextEncoder()
+		const dpop_token_encoded = encoder.encode(dpopTokenEncoded)
 
-		// resolve credential and save to file system
-	    credential.then(async (data) => {
-			var vcs = data.vc;
+		const ArrayBuffer_Digest = await crypto.subtle.digest("SHA-256", dpop_token_encoded)
+		const base64_digest = btoa(Array.from(new Uint8Array(ArrayBuffer_Digest, 
+			b => String.fromCharCode(b))).join(''))
+		const base64url_digest = arrayBufferToBase64url(ArrayBuffer_Digest);
 
-			// If vcs are not a list but a single vc
-			vcs = typeof vcs == "string" ? [vcs] : vcs;
+		const hashArray_digest = Array.from(new Uint8Array(ArrayBuffer_Digest));
+		const hashHex_digest = hashArray_digest.map(b => b.toString(16).padStart(2, '0')).join('');
+		
 
-			for (const vc of vcs){ 
-				var newVCstate = {}
-				// decode credential JWT and save iss and type to the state
-				console.log("VC = ", vc)
-				const vcJWTpayload = parseJwt(vc)
+		const base64_plain = btoa(Array.from(new Uint8Array(dpop_token_encoded)))
 
-				if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
-					newVCstate.iss = vcJWTpayload.iss;
-					newVCstate.type = vcJWTpayload.vc.type;
-					newVCstate.aud = vcJWTpayload.aud
+		const base64url_plain = arrayBufferToBase64url(dpop_token_encoded)
+
+		console.log("RES CLOUD KMS data_to_sign = ", base64_digest)
+		
+		const KMS_signature = await requestSignature(base64_digest, access_token);
+
+		const JSONsignature = JSON.parse(KMS_signature)
+		console.log("RES CLOUD KMS SIGNATURE = ", JSONsignature)
+
+		// Base 64 URL encoding of the signature
+		const signatureBase64url =  JSONsignature["signature"]
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_')
+			.replace(/=+$/, '');
+		
+		// DPoP
+		const dpop_jwt = dpopTokenEncoded + "." +signatureBase64url;
+
+		console.log("DPOP JWT = ", dpop_jwt)
+
+		// save the dpop value
+		await browser.storage.local.set({dpop: dpop_jwt}, () => {console.log("Sved dpop")})
+	}
+	
+	const _dpop = await browser.storage.local.get(["dpop"]);
+	_request["dpop"] = _dpop.dpop;
+
+	const credential = fetchCredential(_request);
+
+	// resolve credential and save to file system
+	credential.then(async (data) => {
+		var vcs = data.vc;
+
+		// If vcs are not a list but a single vc
+		vcs = typeof vcs == "string" ? [vcs] : vcs;
+
+		for (const vc of vcs){ 
+			var newVCstate = {}
+			// decode credential JWT and save iss and type to the state
+			console.log("VC = ", vc)
+			const vcJWTpayload = parseJwt(vc)
+
+			if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
+				newVCstate.iss = vcJWTpayload.iss;
+				newVCstate.type = vcJWTpayload.vc.type;
+				newVCstate.aud = vcJWTpayload.aud
+			}
+
+			newVCstate.payload = data.vc;
+			newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
+			console.log("NEW VC STATE = ", newVCstate)
+			await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {
+				let state = res.SavedCredentials? res.SavedCredentials:[];		
+				state.push(newVCstate);
+				await browser.storage.local.set({"SavedCredentials": state})
+			})	
+			
+			// If the credential is for an issuer that is not already saved, save the issuer
+			await browser.storage.local.get(["issuers"]).then(async (res) => {
+				let issuers = res.issuers ? res.issuers : [];
+				let found = false;
+				for (const issuer of issuers) {
+					const issuerUrl = issuer.url;
+					if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
 				}
 
-				newVCstate.payload = data.vc;
-				newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
-				console.log("NEW VC STATE = ", newVCstate)
-				await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {
-					let state = res.SavedCredentials? res.SavedCredentials:[];		
-					state.push(newVCstate);
-					await browser.storage.local.set({"SavedCredentials": state})
-				})	
+				if (!found) {
+					const issURL = new URL(newVCstate.iss);
+					issuers.push({name: issURL.hostname, url: _request.IssuingURL});
+					await browser.storage.local.set({"issuers": issuers})
+				}
+			})
 				
-				// If the credential is for an issuer that is not already saved, save the issuer
-				await browser.storage.local.get(["issuers"]).then(async (res) => {
-					let issuers = res.issuers ? res.issuers : [];
-					let found = false;
-					for (const issuer of issuers) {
-						const issuerUrl = issuer.url;
-						if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
-					}
-
-					if (!found) {
-						const issURL = new URL(newVCstate.iss);
-						issuers.push({name: issURL.hostname, url: _request.IssuingURL});
-						await browser.storage.local.set({"issuers": issuers})
-					}
-				})
-					
-			}
-			window.location.href = "../html/getVC_success.html"
-		}).catch(error => {
-			alert("Resolving Credential Error")
-			console.log("getVC-popup-script.js: Error: ", error)
-		});
-	   }
-	)	
+		}
+		window.location.href = "../html/getVC_success.html"
+	}).catch(error => {
+		alert("Resolving Credential Error")
+		console.log("getVC-popup-script.js: Error: ", error)
+	});
   }
 )
 

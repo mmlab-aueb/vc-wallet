@@ -15,5 +15,11 @@
     	"webRequest",
 		"webRequestBlocking",
 		"<all_urls>"
-  	]
+  	],
+	"content_scripts": [
+		{
+		  "matches": ["http://127.0.0.1/*"],
+		  "js": ["./scripts/CloudKMS.js", "./utils/dpop-utils.js"]
+		}
+	  ]
 }

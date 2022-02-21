@@ -105,16 +105,5 @@ function generateKeys(pass) {
         const wrapPromise = wrapCryptoKey(keyPair.privateKey, pass);
 
         return Promise.all([jwkPromise, wrapPromise])
-        // .then(
-        //   ([pk_jwk, wraped_key]) => {
-        //     // console.log("PROMIS ALL RESULT = ", res)
-        //     // const pk_jwk = ""
-        //     // const wraped_key = ""
-        //     const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
-        //     browser.storage.local.set({keys: {pubKey: pk_jwk, wrapedKey: wrapedKey_data}})
-        //   }
-        // ).catch((e)=>{console.log("Error in creating client keys: ", e)})
     })
 }
-
-//{SavedCredentials: [{vc:..., pubKey:..., wrappedKey:...},...]}

@@ -1,11 +1,12 @@
 /**
- * Create a dpop value using the cypto.subtle API
  * 
- * @param {*} pubKey pubKey for the dpop
- * @param {*} requestEvent the HTTP request in wich to add the dpop value
+ * @param {*} pubKey  pubKey for the dpop
+ * @param {*} method the HTTP request in wich to add the dpop value
  * @param {*} audience the URL of the dpop recepient
+ * @param {*} dpop_alg the crypto algorithm of the pub key
+ * @returns 
  */
-async function dpop(pubKey, wrapedKey, method, audience, dpop_alg, logedInInfo) {
+async function dpop_token(pubKey, method, audience, dpop_alg) {
     //  dpop creation
     //      1. JWT header
     const dpop_header = {
@@ -30,12 +31,24 @@ async function dpop(pubKey, wrapedKey, method, audience, dpop_alg, logedInInfo) 
     //      3. dpop token without the signature
     const encodedHeader = jsonToBase64url(dpop_header);
     const encodedPayload = jsonToBase64url(dpop_payload);
-    var dpop_token = encodedHeader + "." + encodedPayload;
+    return encodedHeader + "." + encodedPayload;
+}
+
+
+/**
+ * Create a dpop value using the cypto.subtle API
+ * 
+ * @param {*} pubKey pubKey for the dpop
+ * @param {*} requestEvent the HTTP request in wich to add the dpop value
+ * @param {*} audience the URL of the dpop recepient
+ */
+async function dpop(pubKey, wrapedKey, method, audience, dpop_alg, logedInInfo) {
+
+    var dpop_token = dpop_token(pubKey, method, audience, dpop_alg)
 
     //      4. create jws and add dpop header
     const encoder = new TextEncoder()
     const dpop_token_encoded = encoder.encode(dpop_token)
-
 
     const signature = await window.crypto.subtle.sign(
                                 {

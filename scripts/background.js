@@ -76,8 +76,9 @@ const main = async () => {
         console.log("REQUEST: ", request)
         sendResponse("OK")
 
+
         // read the password
-        if (request.logedInInfo.password) {
+        if (request.logedInInfo && request.logedInInfo.password) {
             if(!logedInInfo) {
                 logedInInfo = request.logedInInfo.password;
                 }
@@ -85,11 +86,34 @@ const main = async () => {
             }
 
         // save the user info
-        if (request.logedInInfo.username && request.logedInInfo.org) {
+        if (request.logedInInfo && request.logedInInfo.username && request.logedInInfo.org) {
         browser.storage.local.set({userInfo:{
-            username: request.logedInInfo.username,
-            org: request.logedInInfo.org
-        }}, ()=>{})
+                username: request.logedInInfo.username,
+                org: request.logedInInfo.org
+            }}, ()=>{})
+        }
+
+        // open a window to get an access token for Cloud KMS
+        if (request.GoogleKMSaccessToken && request.GoogleKMSaccessToken == "TOKEN_REQUEST") {
+            var w = 2*366;
+            var h = 2*240;
+            browser.windows.create({
+                url: "http://127.0.0.1:3002", 
+                type: "popup",
+                width: w,
+                height: h,
+                left: (screen.width/2)-(w/2),
+                top: (screen.height/2)-(h/2)
+            });
+        }
+
+        // save the oauth access token for the Cloud KMS to local storage
+        if (request.GoogleKMSaccessToken && request.GoogleKMSaccessToken == "SAVE_TOKEN") {
+            console.log("KMS ACCESS TOKEN = ", request.access_token);
+
+            // save the access token
+            browser.storage.local.set({cloudKMS:{access_token: request.access_token}}, 
+                () => {console.log("access token saved")})
         }
     })
 
