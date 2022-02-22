@@ -37,19 +37,25 @@ function getKey(keyMaterial, salt) {
 /**
 * Wrap the given key.
 */
-async function wrapCryptoKey(keyToWrap, password) {
+async function wrapCryptoKey(keyToWrap, JwkPubKey, password) {
   // get the key encryption key
   const keyMaterial = await getKeyMaterial(password);
   salt = window.crypto.getRandomValues(new Uint8Array(16));
   const wrappingKey = await getKey(keyMaterial, salt);
   iv = window.crypto.getRandomValues(new Uint8Array(12));
 
+  const JwkPubKeyStr = JSON.stringify(JwkPubKey)
+
   // store salt and iv
-  chrome.storage.local.set({wrapMaterial: {
-      salt: JSON.stringify(Array.from(salt)),
-      iv: JSON.stringify(Array.from(iv))
-      }
-  }, () => {console.log("Saved wrapMaterial")})
+  const storage_key = JwkPubKeyStr;
+  
+  const to_save = {}
+  to_save[storage_key] = {wrapMaterial: {
+    salt: JSON.stringify(Array.from(salt)),
+    iv: JSON.stringify(Array.from(iv))
+    }}
+  
+  await browser.storage.local.set(to_save)
 
   return window.crypto.subtle.wrapKey(
     "jwk",
@@ -66,10 +72,14 @@ async function wrapCryptoKey(keyToWrap, password) {
 /**
  * Get the private key from the wraoed key
  */
-async function unWrapCryptoKey(wrapedKey, password) {
-  const wrapMaterial = await readLocalStorage("wrapMaterial")
-  const salt = bytesToArrayBuffer(JSON.parse(wrapMaterial.salt))
-  const iv = bytesToArrayBuffer(JSON.parse(wrapMaterial.iv))
+async function unWrapCryptoKey(wrapedKey, JwkPubKey, password) {
+  const JwkPubKeyStr = JSON.stringify(JwkPubKey)
+
+  const storage_key = JwkPubKeyStr;
+  const PubKeyWrapMaterial = await readLocalStorage(storage_key)
+
+  const salt = bytesToArrayBuffer(JSON.parse(PubKeyWrapMaterial.wrapMaterial.salt))
+  const iv = bytesToArrayBuffer(JSON.parse(PubKeyWrapMaterial.wrapMaterial.iv))
 
   const keyMaterial = await getKeyMaterial(password);
   const wrappingKey = await getKey(keyMaterial, salt);
@@ -92,29 +102,21 @@ async function unWrapCryptoKey(wrapedKey, password) {
 }
 
 
-function generateKeys(pass) {
-  return window.crypto.subtle.generateKey({
+//{SavedCredentials: [{vc:..., pubKey:..., wrappedKey:...},...]}
+
+
+async function generateKeys(pass) {
+  const keyPair = await window.crypto.subtle.generateKey({
       name: "ECDSA",
       namedCurve: "P-384"
     },
     true,
     ["sign", "verify"]
-    )
-    .then((keyPair) => {
-        const jwkPromise = window.crypto.subtle.exportKey("jwk", keyPair.publicKey)
-        const wrapPromise = wrapCryptoKey(keyPair.privateKey, pass);
+  )
 
-        return Promise.all([jwkPromise, wrapPromise])
-        // .then(
-        //   ([pk_jwk, wraped_key]) => {
-        //     // console.log("PROMIS ALL RESULT = ", res)
-        //     // const pk_jwk = ""
-        //     // const wraped_key = ""
-        //     const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
-        //     browser.storage.local.set({keys: {pubKey: pk_jwk, wrapedKey: wrapedKey_data}})
-        //   }
-        // ).catch((e)=>{console.log("Error in creating client keys: ", e)})
-    })
+  const jwkPubKey = await window.crypto.subtle.exportKey("jwk", keyPair.publicKey);
+  const wrapedKey = await wrapCryptoKey(keyPair.privateKey, jwkPubKey, pass);
+
+  //return [jwkPromise, wrapPromise]
+  return new Promise((resolve, reject) => {resolve([jwkPubKey, wrapedKey])})
 }
-
-//{SavedCredentials: [{vc:..., pubKey:..., wrappedKey:...},...]}

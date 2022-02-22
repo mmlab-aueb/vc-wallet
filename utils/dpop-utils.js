@@ -36,7 +36,6 @@ async function dpop(pubKey, wrapedKey, method, audience, dpop_alg, logedInInfo) 
     const encoder = new TextEncoder()
     const dpop_token_encoded = encoder.encode(dpop_token)
 
-
     const signature = await window.crypto.subtle.sign(
                                 {
                                 name: "ECDSA",
@@ -46,6 +45,7 @@ async function dpop(pubKey, wrapedKey, method, audience, dpop_alg, logedInInfo) 
                                     bytesToArrayBuffer( 
                                         JSON.parse(wrapedKey)
                                     ),
+                                    pubKey,
                                     logedInInfo),
                                 dpop_token_encoded
                             )

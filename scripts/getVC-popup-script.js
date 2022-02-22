@@ -10,7 +10,7 @@ document.getElementById("back_btn").addEventListener("click", function(){
 
 // send POST request for VC and update the local state
 // credentialsState = {SavedCredentials: ["iss", "type", "aud", "downloadId", "filePath"]}
-document.getElementById("getVC_btn").addEventListener("click", function(){
+document.getElementById("getVC_btn").addEventListener("click", async function(){
 	// send message to background script to ask for credential??
 
 	// read the issuers url and the wallet pass
@@ -21,9 +21,14 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 		"walletPass": document.getElementById("wallet_pass_input").value}
 
 	// Generate keys and use them to create a dpop
-	const keys = generateKeys(logedInInfo);
+	const keys = await generateKeys(logedInInfo);
+    console.log("keys  = ", keys)
+	// [pk_jwk, wraped_key]
+	//keys.then(async ([pk_jwk, wraped_key]) => {
+		const pk_jwk = keys[0]
+		const wraped_key = keys[1]
 
-	keys.then(async ([pk_jwk, wraped_key]) => {
+		console.log("keys data = ", [pk_jwk, wraped_key])
 		const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
 
 		const dpop_jwt = await dpop(
@@ -88,8 +93,8 @@ document.getElementById("getVC_btn").addEventListener("click", function(){
 			alert("Resolving Credential Error")
 			console.log("getVC-popup-script.js: Error: ", error)
 		});
-	   }
-	)	
+	   //}
+	//)	
   }
 )
 

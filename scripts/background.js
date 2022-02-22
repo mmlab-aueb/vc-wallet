@@ -52,6 +52,7 @@ const main = async () => {
     let SavedCredentials = {}
     try{
         SavedCredentials = await readLocalStorage(CREDENTIAL_STATE_NAME);
+        console.log("SavedCredentials = ", SavedCredentials)
 
         for (const el of SavedCredentials){
             if  (!(el.payload == undefined)) {
@@ -101,10 +102,16 @@ const main = async () => {
     var created = false;
     async function reqListenerCallback (e) {
         console.log("on onBeforeSendHeaders, e = ", e)
-        
+    
+        // Remove the port from the url
+        const urlWithoutPort = /\:[0-9]{4}/.test(e.url) ? e.url.replace(/\:[0-9]{4}/, '') : e.url
+
         // check if the request is for a protected resource for which 
         // there is a saved vc.
-        const audience = hasCredential(auds, e.url)
+        const audience = hasCredential(auds,  e.url)
+
+        console.log(" ---> audience = ", audience)
+
         if (audience) {
             if (cache[audience] == undefined) {
                 // Ask for permision from the user
@@ -151,11 +158,12 @@ const main = async () => {
                  audience, 
                  DPOP_ALG,  
                  logedInInfo)
+                 
             // add dpop header
             e.requestHeaders.push({name: "dpop", value: dpop_jwt})
             }
         
-        console.log("e.requestHeaders = ", e.requestHeaders)
+        console.log("RETURNED e.requestHeaders = ", e.requestHeaders)
     
         return new Promise((resolve, reject) => {resolve({requestHeaders: e.requestHeaders})});
     }
@@ -165,10 +173,12 @@ const main = async () => {
      *  Add a HTTP request event listener
      */
     function addRequestListener(auds, urlsToCheck, cache) {
+        console.log("urlsToCheck = ", urlsToCheck)
         //HTTP GET Request event listener
         browser.webRequest.onBeforeSendHeaders.addListener((e) => {
-            console.log("ADDING HTTP REQUEST LISTENER")
-            return reqListenerCallback(e)},
+            console.log("E = ", e)
+            return reqListenerCallback(e)
+        },
             {
                 // only listen for the protected resources that there is a vc with that audience
                 urls: urlsToCheck
@@ -178,6 +188,7 @@ const main = async () => {
     }
 
     if (urlsToCheck.length > 0) {
+        console.log("ADDING HTTP REQUEST LISTENER")
         addRequestListener(auds, urlsToCheck, cache);
     }
 
@@ -192,9 +203,14 @@ const main = async () => {
 
                 if (newValue) {
                     for (const el of newValue){
-                        auds[el.aud] = el.payload
-                        urlsToCheck.push(formatAudUrl(el.aud))
-                    }
+                        const _vc = {payload: el.payload, keys: el.keys}
+                        if (auds[el.aud] == undefined) {
+                            auds[el.aud] = [_vc]
+                            urlsToCheck.push(formatAudUrl(el.aud))
+                        } else {
+                            auds.push(_vc)
+                        }
+                    } //const _vc = {payload: el.payload, keys: el.keys}
                 }
 
                 // remove the onBeforeSendHeaders listener and re-add him with

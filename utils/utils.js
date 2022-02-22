@@ -14,7 +14,13 @@ function bytesToArrayBuffer(bytes) {
  * that url does not end with "/*"
  */
 function formatAudUrl(url) {
-    const url_start_formed = (/^http:\/\//.test(url) || /^https:\/\//.test(url)) ? url : "*://*."+url
+    // Remove the port from the url
+    const urlWithoutPort = /\:[0-9]{4}/.test(url) ? url.replace(/\:[0-9]{4}/, '') : url
+
+    // Add "*://" if scheme is missing (TODO: Add https:// instead pf "*://*.")
+    const url_start_formed = (/^http:\/\//.test(urlWithoutPort) || /^https:\/\//.test(urlWithoutPort)) ? 
+                                urlWithoutPort : "*://*."+urlWithoutPort
+
     return /\/\*$/.test(url_start_formed) ? url_start_formed : (/\/$/.test(url_start_formed) ? 
                         url_start_formed + "*" : url_start_formed + "/*");
 }
@@ -48,7 +54,7 @@ function arrayBufferToBase64url(array_buffer) {
  * which the given url is a sub url
  */
  function hasCredential(auds, url) {
-    for (aud of Object.keys(auds)) {
+    for (const aud of Object.keys(auds)) {
         if (url.indexOf(aud) > -1) {
             return aud;
         }
@@ -64,7 +70,7 @@ function arrayBufferToBase64url(array_buffer) {
     return new Promise((resolve, reject) => {
         chrome.storage.local.get([key], (res) => {
             if (res[key] === undefined) {
-                reject();
+                reject("undefined key");
             } else {
                 resolve(res[key]);
         }});
