@@ -56,12 +56,39 @@ const main = async () => {
 
         for (const el of SavedCredentials){
             if  (!(el.payload == undefined)) {
+
+                let replace = false
+                let patern
+                let replaceWith
+                if (/127.0.0.1/.test(el.aud)){
+                    replace = true
+                    patern = /127.0.0.1/;
+                    replaceWith = "localhost";
+                }else if (/localhost/.test(el.aud)){
+                    replace = true
+                    patern = /localhost/;
+                    replaceWith = "127.0.0.1";
+                }
+
                 const _vc = {payload: el.payload, keys: el.keys}
                 if (auds[el.aud] == undefined){
                     auds[el.aud] = [_vc];
                     urlsToCheck.push(formatAudUrl(el.aud));
+
+                    if (replace) {
+                        const aud_url = el.aud
+                        const localhost_aud = aud_url.replace(patern, replaceWith)
+                        auds[localhost_aud]  = [_vc]
+                        urlsToCheck.push(formatAudUrl(localhost_aud))
+                    }
                 } else {
                     auds[el.aud].push(_vc)
+
+                    if (replace) {
+                        const aud_url = el.aud
+                        const localhost_aud = aud_url.replace(patern, replaceWith)
+                        auds[localhost_aud].push(_vc)
+                    }
                 }
             }
         }
@@ -158,7 +185,7 @@ const main = async () => {
                  audience, 
                  DPOP_ALG,  
                  logedInInfo)
-                 
+
             // add dpop header
             e.requestHeaders.push({name: "dpop", value: dpop_jwt})
             }
@@ -204,11 +231,38 @@ const main = async () => {
                 if (newValue) {
                     for (const el of newValue){
                         const _vc = {payload: el.payload, keys: el.keys}
+
+                        let replace = false
+                        let patern
+                        let replaceWith
+                        if (/127.0.0.1/.test(el.aud)){
+                            replace = true
+                            patern = /127.0.0.1/;
+                            replaceWith = "localhost";
+                        }else if (/localhost/.test(el.aud)){
+                            replace = true
+                            patern = /localhost/;
+                            replaceWith = "127.0.0.1";
+                        }
+
                         if (auds[el.aud] == undefined) {
                             auds[el.aud] = [_vc]
                             urlsToCheck.push(formatAudUrl(el.aud))
+
+                            if (replace) {
+                                const aud_url = el.aud
+                                const localhost_aud = aud_url.replace(patern, replaceWith)
+                                auds[localhost_aud]  = [_vc]
+                                urlsToCheck.push(formatAudUrl(localhost_aud))
+                            }
                         } else {
                             auds.push(_vc)
+
+                            if (replace) {
+                                const aud_url = el.aud
+                                const localhost_aud = aud_url.replace(patern, replaceWith)
+                                auds[localhost_aud].push(_vc)
+                            }
                         }
                     } //const _vc = {payload: el.payload, keys: el.keys}
                 }
