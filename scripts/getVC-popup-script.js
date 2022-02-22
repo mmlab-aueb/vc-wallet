@@ -53,37 +53,44 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 
 		// read access token for the KMS api
 		const resCloudKms = await browser.storage.local.get(["cloudKMS"]);
-		const access_token = resCloudKms.cloudKMS.access_token
+		const accessToken = resCloudKms.cloudKMS.access_token
+
+		// Key Info
+		const KeyInfo = {
+			project: "aueb-ztvc",
+			locations: "global",
+			keyRings: "test_key_ring",
+			cryptoKeys: "test_key_rsa_raw",
+			cryptoKeyVersions: 1,
+		}
 
 		// Request the Pub Key
-		const PubKeyReqBody = JSON.stringify(
-			{
-				project: "aueb-ztvc",
-				locations: "global",
-				keyRings: "test_key_ring",
-				cryptoKeys: "test_key_rsa_raw",
-				cryptoKeyVersions: 1,
-				access_token: access_token
-			}
-		)
+		const PubKeyReqBody = JSON.stringify({auth: {access_token: accessToken}, 
+			                                  keyInfo: KeyInfo})
 		
-		await fetch("http://127.0.0.1:3002/pubKey",
+		const pubKey = await fetch("http://127.0.0.1:3002/pubKey",
 			{
 				headers: {
-					'Content-Type': 'application/json'
+					"Content-Type": "application/json",
+					"Accept": "application/json"
 				},
 				method: "POST",
 				body: PubKeyReqBody
 			}
-		).then((res) => {console.log("FETCHING PUB KEY = ", res)})
+		).then((res) => {return res.json()})
+
+		const JwkPubKey = pubKey.JWK
+		console.log("FETCHING PUB KEY = ", JwkPubKey)
 		
+		// Get the DPoP token to sign
 		const dpopTokenEncoded = await dpop_token(
-			pubJWK,
+			JwkPubKey,
 			_request.method, 
 			_request.IssuingURL,
-			"ES256")
+			"RS256")  //RS256
 		console.log("DPOP TOKEN = ", dpopTokenEncoded)
 
+		// TEST DIFFERENT ENCODINGS
 		const encoder = new TextEncoder()
 		const dpop_token_encoded = encoder.encode(dpopTokenEncoded)
 
@@ -102,7 +109,10 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 
 		console.log("RES CLOUD KMS data_to_sign = ", base64_digest)
 		
-		const KMS_signature = await requestSignature(base64_digest, access_token);
+
+
+		// -- Req Signature
+		const KMS_signature = await requestSignature(base64_digest, KeyInfo, accessToken);
 
 		const JSONsignature = JSON.parse(KMS_signature)
 		console.log("RES CLOUD KMS SIGNATURE = ", JSONsignature)

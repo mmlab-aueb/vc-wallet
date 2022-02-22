@@ -12,13 +12,15 @@ async function dpop_token(pubKey, method, audience, dpop_alg) {
     const dpop_header = {
         "typ":"dpop+jwt",
         "alg": dpop_alg,
-        "jwk": {
-            "kty": pubKey.kty,
-            "x": pubKey.x,
-            "y": pubKey.y,
-            "crv": pubKey.crv
-        }
+        "jwk": pubKey
     };
+
+    // {
+    //     "kty": pubKey.kty,
+    //     "x": pubKey.x,
+    //     "y": pubKey.y,
+    //     "crv": pubKey.crv
+    // }
     
     //      2. JWT payload
     const dpop_payload = {

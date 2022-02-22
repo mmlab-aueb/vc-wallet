@@ -1,18 +1,19 @@
-async function requestSignature(ToSignData, access_token){
+async function requestSignature(ToSignData, KeyInfo, access_token){
     var api_endpoint = 'https://cloudkms.googleapis.com/v1/'
-    var name = 'projects/aueb-ztvc/locations/global/keyRings/test_key_ring/cryptoKeys/test_key/cryptoKeyVersions/1';
+    var name = `projects/${KeyInfo.project}/locations/${KeyInfo.locations}/keyRings/${KeyInfo.keyRings}/cryptoKeys/${KeyInfo.cryptoKeys}/cryptoKeyVersions/${KeyInfo.cryptoKeyVersions}`
+    // var name = `projects/aueb-ztvc/locations/global/keyRings/test_key_ring/cryptoKeys/test_key/cryptoKeyVersions/1`;
     var API_KEY = 'AIzaSyBSdER1XE7nahA__wFsR8MW92bevaCyKKU'
     // var params = JSON.parse(localStorage.getItem('oauth2-test-params'));
     
-    const _body = {
-        digest: {
-            "sha256": ToSignData
-        }
-    }
-
     // const _body = {
-    //     data: ToSignData
+    //     digest: {
+    //         "sha256": ToSignData
+    //     }
     // }
+
+    const _body = {
+        data: ToSignData
+    }
 
     const _bodyStr = JSON.stringify(_body)
     console.log("_bodyStr = ", _bodyStr)
@@ -25,7 +26,7 @@ async function requestSignature(ToSignData, access_token){
             'Accept': 'application/json'        
             },
         body: _bodyStr,
-        // body:'{"digest": {"sha256": "' + data + '"}}',
+        //body:'{"digest": {"sha256": "' + data + '"}}',
         // body:'{"data": "' + data + '"}',
         method: 'POST'}
 
