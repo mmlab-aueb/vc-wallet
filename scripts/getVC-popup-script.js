@@ -1,5 +1,3 @@
-"use strict";
-
 const DPOP_ALG = "ES384";
 var logedInInfo = "my_pass";
 

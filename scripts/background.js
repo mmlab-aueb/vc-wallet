@@ -154,6 +154,8 @@ const main = async () => {
             // add dpop header
             e.requestHeaders.push({name: "dpop", value: dpop_jwt})
             }
+        
+        console.log("e.requestHeaders = ", e.requestHeaders)
     
         return new Promise((resolve, reject) => {resolve({requestHeaders: e.requestHeaders})});
     }
@@ -165,6 +167,7 @@ const main = async () => {
     function addRequestListener(auds, urlsToCheck, cache) {
         //HTTP GET Request event listener
         browser.webRequest.onBeforeSendHeaders.addListener((e) => {
+            console.log("ADDING HTTP REQUEST LISTENER")
             return reqListenerCallback(e)},
             {
                 // only listen for the protected resources that there is a vc with that audience

@@ -67,7 +67,7 @@ function DOMaddVC(newVC, HTML_li_id, vc_ul) {
   button.setAttribute("style", "vertical-align: middle;")
 
   button.setAttribute("id", "delVCbtn_"+HTML_li_id);
-  button.setAttribute("onclick", "deleteVC(this)");
+  //button.setAttribute("onclick", "deleteVC(this)");
   button.addEventListener("click", deleteVC)
   li_div.appendChild(button);
 
