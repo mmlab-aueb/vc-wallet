@@ -62,7 +62,7 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 					newVCstate.aud = vcJWTpayload.aud
 				}
 
-				newVCstate.payload = data.vc;
+				newVCstate.payload = vc;
 				newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
 				console.log("NEW VC STATE = ", newVCstate)
 				await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {
