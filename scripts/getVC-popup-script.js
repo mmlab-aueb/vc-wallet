@@ -1,3 +1,5 @@
+"use strict";
+
 const DPOP_ALG = "ES384";
 var logedInInfo = "my_pass";
 
@@ -53,16 +55,25 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 			for (const vc of vcs){ 
 				var newVCstate = {}
 				// decode credential JWT and save iss and type to the state
-				console.log("VC = ", vc)
 				const vcJWTpayload = parseJwt(vc)
 
-				if (vcJWTpayload.iss && vcJWTpayload.vc.type && vcJWTpayload.aud){
-					newVCstate.iss = vcJWTpayload.iss;
-					newVCstate.type = vcJWTpayload.vc.type;
-					newVCstate.aud = vcJWTpayload.aud
+				// allow storage of VCs with some of the fields (i.e., aud, iss etc.,) missing
+				// Other parts of the app are responsible with checking for those parts where needed
+				const RequiredFields  = {
+					iss: vcJWTpayload.iss, 
+					type: vcJWTpayload.vc.type,
+					aud: vcJWTpayload.aud,
+					jti: vcJWTpayload.jti
 				}
 
-				newVCstate.payload = vc;
+				Object.keys(RequiredFields).forEach((key) => {
+					if (RequiredFields[key] != undefined){
+						newVCstate[key] = RequiredFields[key];
+					}
+				})
+
+				newVCstate.vcJwt = vc;
+				console.log("vc = ", vc)
 				newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
 				console.log("NEW VC STATE = ", newVCstate)
 				await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {

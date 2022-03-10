@@ -19,8 +19,9 @@ function formatAudUrl(url) {
 
     // Add "*://" if scheme is missing (TODO: Add https:// instead pf "*://*.")
     const url_start_formed = (/^http:\/\//.test(urlWithoutPort) || /^https:\/\//.test(urlWithoutPort)) ? 
-                                urlWithoutPort : "*://*."+urlWithoutPort
+                                urlWithoutPort : "*://*."+urlWithoutPort;
 
+    // Add "/*" in the end and return
     return /\/\*$/.test(url_start_formed) ? url_start_formed : (/\/$/.test(url_start_formed) ? 
                         url_start_formed + "*" : url_start_formed + "/*");
 }
@@ -96,4 +97,60 @@ function fetchLocalResourceSync(url) {
         throw Error("Cant load credential from " + url)
         return null
     }
+}
+
+
+/**
+ * Handle VCs with localhost as the audience.
+ */
+function handle_localhost_aud(aud) {
+    // TODO: Ypdate to use something like
+    // const handleLocalAud = /127.0.0.1/.test(el.aud) ? (/127.0.0.1/, "localhost") 
+    //                     : /localhost/.test(el.aud) ? ("localhost", /127.0.0.1/) : false
+    let replace = false
+    let patern
+    let replaceWith
+    if (/127.0.0.1/.test(aud)){
+        replace = true
+        patern = /127.0.0.1/;
+        replaceWith = "localhost";
+    } else if (/localhost/.test(aud)){
+        replace = true
+        patern = /localhost/;
+        replaceWith = "127.0.0.1";
+    }
+
+    return (replace, patern, replaceWith)
+}
+
+
+/**
+ * Update the auds to VCs map and the urls to check list, based on a new credential
+ */
+function updateAuds(auds, urlsToCheck, newVcAud, Vc){
+    let replace = false
+    let patern, replaceWith
+
+    replace, patern, replaceWith = handle_localhost_aud(newVcAud);
+
+    if (auds[newVcAud] == undefined){
+        auds[newVcAud] = [Vc];
+        urlsToCheck.push(formatAudUrl(newVcAud));
+
+        if (patern != undefined && replaceWith != undefined) {
+            const aud_url = newVcAud
+            const localhost_aud = aud_url.replace(patern, replaceWith)
+            auds[localhost_aud]  = [Vc]
+            urlsToCheck.push(formatAudUrl(localhost_aud))
+        }
+    } else {
+        auds[newVcAud].push(Vc)
+
+        if (patern != undefined && replaceWith != undefined) {
+            const aud_url = newVcAud
+            const localhost_aud = aud_url.replace(patern, replaceWith)
+            auds[localhost_aud].push(Vc)
+        }
+    }
+    return (auds, urlsToCheck)
 }

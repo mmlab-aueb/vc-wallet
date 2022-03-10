@@ -55,41 +55,10 @@ const main = async () => {
         console.log("SavedCredentials = ", SavedCredentials)
 
         for (const el of SavedCredentials){
-            if  (!(el.payload == undefined)) {
+            if  (!(el.vcJwt == undefined)) {
 
-                let replace = false
-                let patern
-                let replaceWith
-                if (/127.0.0.1/.test(el.aud)){
-                    replace = true
-                    patern = /127.0.0.1/;
-                    replaceWith = "localhost";
-                }else if (/localhost/.test(el.aud)){
-                    replace = true
-                    patern = /localhost/;
-                    replaceWith = "127.0.0.1";
-                }
-
-                const _vc = {payload: el.payload, keys: el.keys}
-                if (auds[el.aud] == undefined){
-                    auds[el.aud] = [_vc];
-                    urlsToCheck.push(formatAudUrl(el.aud));
-
-                    if (replace) {
-                        const aud_url = el.aud
-                        const localhost_aud = aud_url.replace(patern, replaceWith)
-                        auds[localhost_aud]  = [_vc]
-                        urlsToCheck.push(formatAudUrl(localhost_aud))
-                    }
-                } else {
-                    auds[el.aud].push(_vc)
-
-                    if (replace) {
-                        const aud_url = el.aud
-                        const localhost_aud = aud_url.replace(patern, replaceWith)
-                        auds[localhost_aud].push(_vc)
-                    }
-                }
+                const _vc = {vcJwt: el.vcJwt, keys: el.keys}
+                auds, urlsToCheck = updateAuds(auds, urlsToCheck, el.aud, _vc)
             }
         }
     } catch(err){
@@ -129,6 +98,7 @@ const main = async () => {
     var created = false;
     async function reqListenerCallback (e) {
         console.log("on onBeforeSendHeaders, e = ", e)
+        console.log("on onBeforeSendHeaders, auds = ", auds)
     
         // Remove the port from the url
         const urlWithoutPort = /\:[0-9]{4}/.test(e.url) ? e.url.replace(/\:[0-9]{4}/, '') : e.url
@@ -136,24 +106,27 @@ const main = async () => {
         // check if the request is for a protected resource for which 
         // there is a saved vc.
         const audience = hasCredential(auds,  e.url)
-
+ 
         console.log(" ---> audience = ", audience)
 
         if (audience) {
-            if (cache[audience] == undefined) {
+            // if (cache[audience] == undefined) {
                 // Ask for permision from the user
                 // TODO: break if user presses cancel
                 //alert(e.url + " Reqests a Credential");
-            }
+            // }
             const credentials = auds[audience];
             
             // TODO: How to choose what credential from the list to send??
             const credential = credentials[0]
+            console.log("on onBeforeSendHeaders, credentials = ", credentials)
+            console.log("on onBeforeSendHeaders, credential = ", credential)
+            console.log("on onBeforeSendHeaders, credential.vcJwt = ", credential.vcJwt)
 
             // Add the auth header
             if (credential) {
                 e.requestHeaders.push({name: "authorization", 
-                                       value: "Bearer " + credential.payload});
+                                       value: "Bearer " + credential.vcJwt});
             }
 
             cache[audience] = credential
@@ -171,7 +144,7 @@ const main = async () => {
                 });
                 created = true;
 
-                const _res = await awaitForPassword();
+                //const _res = await awaitForPassword();
                 //TODO: What if the user closes the popup without supling a password
             }
 
@@ -189,10 +162,12 @@ const main = async () => {
             // add dpop header
             e.requestHeaders.push({name: "dpop", value: dpop_jwt})
             }
+
+        const headers = e.requestHeaders
         
-        console.log("RETURNED e.requestHeaders = ", e.requestHeaders)
+        console.log("RETURNED e.requestHeaders = ", headers)
     
-        return new Promise((resolve, reject) => {resolve({requestHeaders: e.requestHeaders})});
+        return new Promise((resolve, reject) => {resolve({requestHeaders: headers})});
     }
 
 
@@ -202,10 +177,8 @@ const main = async () => {
     function addRequestListener(auds, urlsToCheck, cache) {
         console.log("urlsToCheck = ", urlsToCheck)
         //HTTP GET Request event listener
-        browser.webRequest.onBeforeSendHeaders.addListener((e) => {
-            console.log("E = ", e)
-            return reqListenerCallback(e)
-        },
+        browser.webRequest.onBeforeSendHeaders.addListener(
+            reqListenerCallback,
             {
                 // only listen for the protected resources that there is a vc with that audience
                 urls: urlsToCheck
@@ -223,48 +196,19 @@ const main = async () => {
     browser.storage.onChanged.addListener((changes, nameSpace) => {
         for (const [key, {newValue, oldValue}] of Object.entries(changes)) {
             if ((key == CREDENTIAL_STATE_NAME) && (nameSpace == "local")) {
-
+                // The new value will be the whole list of credentials, which is
+                // why we reset the auds and urlsToCheck states
                 for (const key of Object.keys(auds)){
                     delete auds[key]
                 }
 
+                urlsToCheck = []
+
                 if (newValue) {
                     for (const el of newValue){
-                        const _vc = {payload: el.payload, keys: el.keys}
-
-                        let replace = false
-                        let patern
-                        let replaceWith
-                        if (/127.0.0.1/.test(el.aud)){
-                            replace = true
-                            patern = /127.0.0.1/;
-                            replaceWith = "localhost";
-                        }else if (/localhost/.test(el.aud)){
-                            replace = true
-                            patern = /localhost/;
-                            replaceWith = "127.0.0.1";
-                        }
-
-                        if (auds[el.aud] == undefined) {
-                            auds[el.aud] = [_vc]
-                            urlsToCheck.push(formatAudUrl(el.aud))
-
-                            if (replace) {
-                                const aud_url = el.aud
-                                const localhost_aud = aud_url.replace(patern, replaceWith)
-                                auds[localhost_aud]  = [_vc]
-                                urlsToCheck.push(formatAudUrl(localhost_aud))
-                            }
-                        } else {
-                            auds.push(_vc)
-
-                            if (replace) {
-                                const aud_url = el.aud
-                                const localhost_aud = aud_url.replace(patern, replaceWith)
-                                auds[localhost_aud].push(_vc)
-                            }
-                        }
-                    } //const _vc = {payload: el.payload, keys: el.keys}
+                        const _vc = {vcJwt: el.vcJwt, keys: el.keys}
+                        auds, urlsToCheck = updateAuds(auds, urlsToCheck, el.aud, _vc)
+                    }
                 }
 
                 // remove the onBeforeSendHeaders listener and re-add him with
