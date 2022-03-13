@@ -54,11 +54,12 @@ const main = async () => {
         SavedCredentials = await readLocalStorage(CREDENTIAL_STATE_NAME);
         console.log("SavedCredentials = ", SavedCredentials)
 
-        for (const el of SavedCredentials){
-            if  (!(el.vcJwt == undefined)) {
+        for (const el of Object.values(SavedCredentials)){
+            const savedVc = JSON.parse(el);
+            if  (!(savedVc.vcJwt == undefined)) {
 
-                const _vc = {vcJwt: el.vcJwt, keys: el.keys}
-                auds, urlsToCheck = updateAuds(auds, urlsToCheck, el.aud, _vc)
+                const _vc = {vcJwt: savedVc.vcJwt, keys: savedVc.keys}
+                auds, urlsToCheck = updateAuds(auds, urlsToCheck, savedVc.aud, _vc)
             }
         }
     } catch(err){
@@ -205,9 +206,12 @@ const main = async () => {
                 urlsToCheck = []
 
                 if (newValue) {
-                    for (const el of newValue){
-                        const _vc = {vcJwt: el.vcJwt, keys: el.keys}
-                        auds, urlsToCheck = updateAuds(auds, urlsToCheck, el.aud, _vc)
+                    for (const el of Object.values(newValue)){
+                        const savedVc = JSON.parse(el);
+                        if (savedVc.vcJwt != undefined){
+                            const _vc = {vcJwt: savedVc.vcJwt, keys: savedVc.keys}
+                            auds, urlsToCheck = updateAuds(auds, urlsToCheck, savedVc.aud, _vc)
+                        }
                     }
                 }
 

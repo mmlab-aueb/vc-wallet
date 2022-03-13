@@ -63,7 +63,7 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 					iss: vcJWTpayload.iss, 
 					type: vcJWTpayload.vc.type,
 					aud: vcJWTpayload.aud,
-					jti: vcJWTpayload.jti
+					vcJwt: vc
 				}
 
 				Object.keys(RequiredFields).forEach((key) => {
@@ -72,13 +72,15 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 					}
 				})
 
-				newVCstate.vcJwt = vc;
-				console.log("vc = ", vc)
+				// Index the saved credentials based on the jti value
+				const jti = vcJWTpayload.jti;
 				newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
 				console.log("NEW VC STATE = ", newVCstate)
 				await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {
-					let state = res.SavedCredentials? res.SavedCredentials:[];		
-					state.push(newVCstate);
+					let state = res.SavedCredentials? res.SavedCredentials.length == 0?{}:
+					 res.SavedCredentials:{};
+
+					state[jti] = JSON.stringify(newVCstate);
 					await browser.storage.local.set({"SavedCredentials": state})
 				})	
 				

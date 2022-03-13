@@ -17,16 +17,13 @@ document.getElementById("VCs_list_ul").addEventListener("click",
     })
 })
 
-function deleteVC(event) {
+async function deleteVC(event) {
   if (confirm("Do you want to delete this credential??") == false) {return}
-  browser.storage.local.get(["SavedCredentials"], (res) => {
+  await browser.storage.local.get(["SavedCredentials"], 
+  async (res) => {
     const savedVCs = res.SavedCredentials;
-    const VCid = event.target.id;
-    const VCindex = VCid.split("_")[1];
-
-    const vcToDelete = savedVCs[VCindex];
-
-    savedVCs.splice(VCindex, 1)
+    const VCjti = event.target.parentNode.id;
+    delete savedVCs[VCjti];
 
     browser.storage.local.set({SavedCredentials: savedVCs}, () => {
       document.getElementById("VCs_list_ul").textContent = '';
@@ -66,7 +63,7 @@ function DOMaddVC(newVC, HTML_li_id, vc_ul) {
   button.setAttribute("style", "margin: 0; padding:0; float: right")
   button.setAttribute("style", "vertical-align: middle;")
 
-  button.setAttribute("id", "delVCbtn_"+HTML_li_id);
+  button.setAttribute("id", ""+HTML_li_id);
   //button.setAttribute("onclick", "deleteVC(this)");
   button.addEventListener("click", deleteVC)
   li_div.appendChild(button);
@@ -79,17 +76,21 @@ function DOMaddVC(newVC, HTML_li_id, vc_ul) {
 
 
 // read the saved issuers and vcs and display them in the popup
-const main = () => {
+function main() {
   // read and display the saved VCs state
   browser.storage.local.get(["SavedCredentials"], function(res) {
+    const savedVCs = Object.values(res.SavedCredentials);
+    const savedVCsMap = res.SavedCredentials;
 
-    if (res.SavedCredentials && res.SavedCredentials.length>0){
-      var HTML_li_id=0;
+    if (savedVCs && savedVCs.length > 0){
       const vc_ul = document.getElementById("VCs_list_ul");
-      res.SavedCredentials.forEach((element) => {
-        DOMaddVC(element, HTML_li_id, vc_ul);
-        HTML_li_id += 1;
-      })
+
+      for (const JtiKey of Object.keys(savedVCsMap)) {
+        var HTML_li_id = JtiKey;
+
+        const savedVc = JSON.parse(savedVCsMap[JtiKey]);
+        DOMaddVC(savedVc, HTML_li_id, vc_ul);
+      }
     };
   })
 }
