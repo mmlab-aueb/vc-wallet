@@ -2,16 +2,18 @@
 document.getElementById("VCs_list_ul").addEventListener("click",
   function(event) {
     const clicked_vc = event.target.innerText;
+    console.log("EVENT = ", event.target.id);
 
     // get SavedCredentials state
     browser.storage.local.get(["SavedCredentials"], function(res){
-      if (res.SavedCredentials && res.SavedCredentials.length>0){
-        // TODO: using the id of the <li> HTML ellement to retreive the state
-        // of the cliced VC. Is that secure?? maybe change the state from a list
-        // to a map??
-        const VCstate = res.SavedCredentials[parseInt(event.target.id)];
-        const display = {Issuer: VCstate.iss, Audience: VCstate.aud, Type: VCstate.type}
-        alert(JSON.stringify(display, null, 2))
+      if (res.SavedCredentials){
+        try{
+          const VCstate = JSON.parse(res.SavedCredentials[event.target.id]);
+          console.log("VCState = ", VCstate)
+
+          const display = {Issuer: VCstate.iss, Audience: VCstate.aud, Type: VCstate.type}
+          alert(JSON.stringify(display, null, 2))
+        } catch {alert("Missing or corupted credential state")}
       };
 
     })
@@ -34,7 +36,6 @@ async function deleteVC(event) {
 
 
 function DOMaddVC(newVC, HTML_li_id, vc_ul) {
-//   document.getElementById("vcsList_initial_msg_p").innerText = null;
   const new_vc_li = document.createElement("li")
   new_vc_li.id = HTML_li_id
   new_vc_li.setAttribute("class", "saved")
