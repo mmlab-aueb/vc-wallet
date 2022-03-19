@@ -56,7 +56,7 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 		const accessToken = resCloudKms.cloudKMS.access_token
 
 		// Key Info
-		const KeyInfo = {
+		const KeyInfo_RSA = {
 			project: "aueb-ztvc",
 			locations: "global",
 			keyRings: "test_key_ring",
@@ -64,9 +64,17 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 			cryptoKeyVersions: 1,
 		}
 
+		const KeyInfo_EC = {
+			project: "aueb-ztvc",
+			locations: "global",
+			keyRings: "test_key_ring",
+			cryptoKeys: "test_key",
+			cryptoKeyVersions: 1,
+		}
+
 		// Request the Pub Key
 		const PubKeyReqBody = JSON.stringify({auth: {access_token: accessToken}, 
-			                                  keyInfo: KeyInfo})
+			                                  keyInfo: KeyInfo_EC})
 		
 		const pubKey = await fetch("http://127.0.0.1:3002/pubKey",
 			{
@@ -80,6 +88,8 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 		).then((res) => {return res.json()})
 
 		const JwkPubKey = pubKey.JWK
+		// JwkPubKey.kty = "RS256"
+		JwkPubKey.alg = "ES256"
 		console.log("FETCHING PUB KEY = ", JwkPubKey)
 		
 		// Get the DPoP token to sign
@@ -87,49 +97,69 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 			JwkPubKey,
 			_request.method, 
 			_request.IssuingURL,
-			"RS256")  //RS256
+			"ES256")  //RS256
 		console.log("DPOP TOKEN = ", dpopTokenEncoded)
 
+
+		// Request Signature From Proxy
+		const SignReqBody = JSON.stringify({auth: {access_token: accessToken},
+											data: dpopTokenEncoded,
+											keyInfo: KeyInfo_EC})
+
+		const signature = await fetch("http://127.0.0.1:3002/signature",
+			{
+				headers: {
+					"Content-Type": "application/json",
+					"Accept": "application/json"
+				},
+				method: "POST",
+				body: SignReqBody
+			}
+		)//.then((res) => {return res.json()})
+
+
 		// TEST DIFFERENT ENCODINGS
-		const encoder = new TextEncoder()
-		const dpop_token_encoded = encoder.encode(dpopTokenEncoded)
+		// const encoder = new TextEncoder()
+		// const dpop_token_encoded = encoder.encode(dpopTokenEncoded)
 
-		const ArrayBuffer_Digest = await crypto.subtle.digest("SHA-256", dpop_token_encoded)
-		const base64_digest = btoa(Array.from(new Uint8Array(ArrayBuffer_Digest, 
-			b => String.fromCharCode(b))).join(''))
-		const base64url_digest = arrayBufferToBase64url(ArrayBuffer_Digest);
+		// const ArrayBuffer_Digest = await crypto.subtle.digest("SHA-256", dpop_token_encoded)
 
-		const hashArray_digest = Array.from(new Uint8Array(ArrayBuffer_Digest));
-		const hashHex_digest = hashArray_digest.map(b => b.toString(16).padStart(2, '0')).join('');
+
+		// const base64_digest = _arrayBufferToBase64(ArrayBuffer_Digest)
+		
+		// const base64url_digest = arrayBufferToBase64url(ArrayBuffer_Digest);
+
+		// const hashArray_digest = Array.from(new Uint8Array(ArrayBuffer_Digest));
+		// const hashHex_digest = hashArray_digest.map(b => b.toString(16).padStart(2, '0')).join('');
 		
 
-		const base64_plain = btoa(Array.from(new Uint8Array(dpop_token_encoded)))
+		// const base64_plain = btoa(Array.from(new Uint8Array(dpop_token_encoded)))
 
-		const base64url_plain = arrayBufferToBase64url(dpop_token_encoded)
+		// const base64url_plain = arrayBufferToBase64url(dpop_token_encoded)
 
-		console.log("RES CLOUD KMS data_to_sign = ", base64_digest)
+		// console.log("RES CLOUD KMS data_to_sign = ", base64_digest)
 		
 
 
-		// -- Req Signature
-		const KMS_signature = await requestSignature(base64_digest, KeyInfo, accessToken);
+		// // -- Req Signature
+		// const KMS_signature = await requestSignature(base64_digest, KeyInfo_EC, accessToken);
 
-		const JSONsignature = JSON.parse(KMS_signature)
-		console.log("RES CLOUD KMS SIGNATURE = ", JSONsignature)
+		// const JSONsignature = JSON.parse(KMS_signature)
+		// console.log("RES CLOUD KMS SIGNATURE = ", JSONsignature)
 
-		// Base 64 URL encoding of the signature
-		const signatureBase64url =  JSONsignature["signature"]
-			.replace(/\+/g, '-')
-			.replace(/\//g, '_')
-			.replace(/=+$/, '');
+		// // Base 64 URL encoding of the signature
+		// const signatureBase64url =  JSONsignature["signature"]
+		// 	.replace(/\+/g, '-')
+		// 	.replace(/\//g, '_')
+		// 	.replace(/=+$/, '');
 		
-		// DPoP
-		const dpop_jwt = dpopTokenEncoded + "." +signatureBase64url;
+		// // DPoP
+		// const dpop_jwt = dpopTokenEncoded + "." +signatureBase64url;
 
-		console.log("DPOP JWT = ", dpop_jwt)
+		// console.log("DPOP JWT = ", dpop_jwt)
 
-		// save the dpop value
-		await browser.storage.local.set({dpop: dpop_jwt}, () => {console.log("Sved dpop")})
+		// // save the dpop value
+		// await browser.storage.local.set({dpop: dpop_jwt}, () => {console.log("Sved dpop")})
 	}
 	
 	const _dpop = await browser.storage.local.get(["dpop"]);

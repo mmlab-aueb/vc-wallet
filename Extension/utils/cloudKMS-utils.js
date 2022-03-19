@@ -5,15 +5,15 @@ async function requestSignature(ToSignData, KeyInfo, access_token){
     var API_KEY = 'AIzaSyBSdER1XE7nahA__wFsR8MW92bevaCyKKU'
     // var params = JSON.parse(localStorage.getItem('oauth2-test-params'));
     
-    // const _body = {
-    //     digest: {
-    //         "sha256": ToSignData
-    //     }
-    // }
-
     const _body = {
-        data: ToSignData
+        digest: {
+            "sha256": ToSignData
+        }
     }
+
+    // const _body = {
+    //     data: ToSignData
+    // }
 
     const _bodyStr = JSON.stringify(_body)
     console.log("_bodyStr = ", _bodyStr)

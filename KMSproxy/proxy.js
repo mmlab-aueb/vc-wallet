@@ -7,14 +7,17 @@
 // const bodyParser = require("body-parser");
 
 
-import fetch from 'node-fetch'
-import express from 'express'
-import https from 'https'
-import path from 'path'
-import {fileURLToPath} from 'url'
+import fetch from 'node-fetch';
+import express from 'express';
+import https from 'https';
+import path from 'path';
+import {fileURLToPath} from 'url';
 import cookieParser from 'cookie-parser';
 import bodyParser from "body-parser";
-import keyutil from 'js-crypto-key-utils'
+import keyutil from 'js-crypto-key-utils';
+import {KeyManagementServiceClient} from '@google-cloud/kms';
+import crypto from 'crypto';
+
 
 const app = express()
 const router = express.Router();
@@ -48,23 +51,86 @@ app.use(bodyParser.json())
 
 // app.use("/token", express.static(path.join(__dirname, 'public')))
 
-app.post("/token", (req, res) => {
-	console.log("Requested a token. Body = ", req.body)
-	console.log("Requested a token. Headers = ", req.headers)
-	if (req.headers.origin == 'moz-extension://be2ebe2d-fbd4-42b7-b743-211f4bb4b3b0') {
+app.post("/signature", async (req, res) => {
+	var _API_KEY = 'AIzaSyBSdER1XE7nahA__wFsR8MW92bevaCyKKU'
+	var _API_ENDPOINT = 'https://cloudkms.googleapis.com/v1/'
+
+	if (req.headers.origin == 'moz-extension://a4077105-b5ec-42ae-8a36-0d66666c2a0e') {
 		console.log("ACCEPTED")
-		// Read DPoP to Sign
+		// Read data to Sign
+		const ReqMessage = req.body.data;
+		console.log("REQ MESSAGE = ", ReqMessage)
+		const message = Buffer.from(ReqMessage);
 
-		// Request Signing from Google KMS
+		// Read oauth token
+		const access_token = req.body.auth.access_token;
 
-		// 			If access token is invalid, return request for login in
+		// Read key params
+		const project = req.body.keyInfo.project;
+		const locations = req.body.keyInfo.locations;
+		const keyRings = req.body.keyInfo.keyRings;
+		const cryptoKeys = req.body.keyInfo.cryptoKeys;
+		const cryptoKeyVersions = req.body.keyInfo.cryptoKeyVersions;
+
+		const client = new KeyManagementServiceClient();
+
+		// Build the version name
+		const versionName = client.cryptoKeyVersionPath(
+		  project,
+		  locations,
+		  keyRings,
+		  cryptoKeys,
+		  cryptoKeyVersions
+		);
+
+		
+    const hash = crypto.createHash('sha256');
+    hash.update(message);
+    const digest = hash.digest();
+
+    const [signResponse] = await client.asymmetricSign({
+    	name: versionName,
+    	data: message
+    	// digest: {
+    	// 	sha256: digest,
+    	// 	}
+    	}
+    );
+
+
+    console.log("signResponse.signature = ", signResponse)
+    const encodedSign = signResponse.signature.toString('base64');
+    const base64url_encodedSign = encodedSign.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    console.log("encodedSign = ", encodedSign)
+    console.log("DPOP = ", ReqMessage + "." + base64url_encodedSign)
+
+
+    // validate the signature
+    //      
+    const[publicKeyObject] = await client.getPublicKey({name: versionName}).catch(console.error);
+		const publicKey = publicKeyObject.pem;
+
+		const keyObjFromPem = new keyutil.Key('pem', publicKey);
+		const jwk = await keyObjFromPem.export('jwk');
+		console.log("jwk = ", jwk)
+
+		const jwkPubKey = crypto.createPublicKey(JSON.stringify(jwk))
+		console.log("jwkPubKey = ", jwkPubKey)
+
+    const verify = crypto.createVerify('sha256');
+    verify.write(message);
+    verify.end();
+    const ver = verify.verify(publicKey, encodedSign, 'base64');
+    console.log("SIGNATURE VERIFY = ", ver);
 
 		// Respond with signature
 	}
 })
 
+
 app.post("/pubKey", async (req, res) => {
-	if (req.headers.origin == 'moz-extension://fb8dd0f3-1fd3-4c01-99c7-a281247932a7') {
+	if (req.headers.origin == 'moz-extension://a4077105-b5ec-42ae-8a36-0d66666c2a0e') {
 		console.log("ACCEPTED")
 		var _API_KEY = 'AIzaSyBSdER1XE7nahA__wFsR8MW92bevaCyKKU'
 		var _API_ENDPOINT = 'https://cloudkms.googleapis.com/v1/' //https://
