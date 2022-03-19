@@ -10,7 +10,7 @@ document.getElementById("back_btn").addEventListener("click", function(){
 })
 
 
-// send POST request for VC and update the local state
+// Send POST request for VC and update the local state
 // credentialsState = {SavedCredentials: ["iss", "type", "aud", "downloadId", "filePath"]}
 document.getElementById("getVC_btn").addEventListener("click", async function(){
 	// send message to background script to ask for credential??
@@ -25,95 +25,93 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 	// Generate keys and use them to create a dpop
 	const keys = await generateKeys(logedInInfo);
     console.log("keys  = ", keys)
-	// [pk_jwk, wraped_key]
-	//keys.then(async ([pk_jwk, wraped_key]) => {
-		const pk_jwk = keys[0]
-		const wraped_key = keys[1]
+	const pk_jwk = keys[0]
+	const wraped_key = keys[1]
 
-		console.log("keys data = ", [pk_jwk, wraped_key])
-		const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
+	console.log("keys data = ", [pk_jwk, wraped_key])
+	const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
 
-		const dpop_jwt = await dpop(
-			pk_jwk, 
-			wrapedKey_data,
-			_request.method, 
-			_request.IssuingURL, 
-			DPOP_ALG, 
-			logedInInfo);
-		
-		_request["dpop"] = dpop_jwt
+	const dpop_jwt = await dpop(
+		pk_jwk, 
+		wrapedKey_data,
+		_request.method, 
+		_request.IssuingURL, 
+		DPOP_ALG, 
+		logedInInfo);
+	
+	_request["dpop"] = dpop_jwt
 
-		const credential = fetchCredential(_request);
+	const credential = fetchCredential(_request);
 
-		// resolve credential and save to file system
-	    credential.then(async (data) => {
-			var vcs = data.vc;
+	// resolve credential and save to state
+	credential.then(async (data) => {
+		var vcs = data.vc;
 
-			// If vcs are not a list but a single vc
-			vcs = typeof vcs == "string" ? [vcs] : vcs;
+		// If vcs are not a list but a single vc
+		vcs = typeof vcs == "string" ? [vcs] : vcs;
 
-			for (const vc of vcs){ 
-				var newVCstate = {}
-				// decode credential JWT and save iss and type to the state
-				const vcJWTpayload = parseJwt(vc)
+		for (const vc of vcs){ 
+			var newVCstate = {}
+			// Decode credential JWT
+			const vcJWTpayload = parseJwt(vc)
 
-				// allow storage of VCs with some of the fields (i.e., aud, iss etc.,) missing
-				// Other parts of the app are responsible with checking for those parts where needed
-				const RequiredFields  = {
-					iss: vcJWTpayload.iss, 
-					type: vcJWTpayload.vc.type,
-					aud: vcJWTpayload.aud,
-					vcJwt: vc
+			// Allow storage of VCs with some of the fields (i.e., aud, iss etc.,) missing.
+			// Other parts of the app are responsible with checking for those parts where needed
+			const RequiredFields  = {
+				iss: vcJWTpayload.iss, 
+				type: vcJWTpayload.vc.type,
+				aud: vcJWTpayload.aud,
+				vcJwt: vc
+			}
+
+			Object.keys(RequiredFields).forEach((key) => {
+				if (RequiredFields[key] != undefined){
+					newVCstate[key] = RequiredFields[key];
 				}
+			})
 
-				Object.keys(RequiredFields).forEach((key) => {
-					if (RequiredFields[key] != undefined){
-						newVCstate[key] = RequiredFields[key];
-					}
-				})
+			newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
+			console.log("New VC state: ", newVCstate)
 
-				// Index the saved credentials based on the jti value
-				const jti = vcJWTpayload.jti;
-				newVCstate.keys = {pubKey: pk_jwk, wrapedKey: wrapedKey_data};
-				console.log("NEW VC STATE = ", newVCstate)
+			// Index the saved credentials based on the jti value
+			const jti = vcJWTpayload.jti;
+			if (jti != undefined){
 				await browser.storage.local.get(["SavedCredentials"]).then(async (res) => {
-					let state = res.SavedCredentials? res.SavedCredentials.length == 0?{}:
-					 res.SavedCredentials:{};
+					let state = res.SavedCredentials? res.SavedCredentials:{};
 
 					state[jti] = JSON.stringify(newVCstate);
 					await browser.storage.local.set({"SavedCredentials": state})
-				})	
-				
-				// If the credential is for an issuer that is not already saved, save the issuer
-				await browser.storage.local.get(["issuers"]).then(async (res) => {
-					let issuers = res.issuers ? res.issuers : [];
-					let found = false;
-					for (const issuer of issuers) {
-						const issuerUrl = issuer.url;
-						if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
-					}
-
-					if (!found) {
-						const issURL = new URL(newVCstate.iss);
-						issuers.push({name: issURL.hostname, url: _request.IssuingURL});
-						await browser.storage.local.set({"issuers": issuers})
-					}
 				})
-					
-			}
-			window.location.href = "../html/getVC_success.html"
+			} else {alert("Missing jti field from credential")};
+
+			// If the credential is for an issuer that is not already saved, save the issuer
+			await browser.storage.local.get(["issuers"]).then(async (res) => {
+				let issuers = res.issuers ? res.issuers : [];
+				let found = false;
+				for (const issuer of issuers) {
+					const issuerUrl = issuer.url;
+					if (issuerUrl.indexOf(newVCstate.iss)>-1) {found = true};
+				}
+
+				if (!found) {
+					const issURL = new URL(newVCstate.iss);
+					issuers.push({name: issURL.hostname, url: _request.IssuingURL});
+					await browser.storage.local.set({"issuers": issuers})
+				}
+			})
+				
+		}
+		window.location.href = "../html/getVC_success.html"
 		}).catch(error => {
 			alert("Resolving Credential Error")
 			console.log("getVC-popup-script.js: Error: ", error)
 		});
-	   //}
-	//)	
   }
 )
 
 
-// get the "issuersURL" local variable and if not empty (is only set when a issuer element 
-// in the Issuers_list_ul of popup.html is clicked) set it as defaul value to the issuers url 
+// Get the "issuersURL" local variable and if not empty (is only set when a issuer element 
+// in the Issuers_list_ul of popup.html is clicked) set it as default value to the issuers url 
 // input
 browser.storage.local.get(["issuersURL"], function(res) {
 	if (res.issuersURL && res.issuersURL !== null) {
@@ -121,10 +119,15 @@ browser.storage.local.get(["issuersURL"], function(res) {
 		document.getElementById("issuer_url_input").value = res.issuersURL
 	}
 })
-//set the "issuersURL" to null again
+// Set the "issuersURL" to null again
 browser.storage.local.set({"issuersURL": null})
 
-// POST the issuing end point for a credential, returns a promise
+
+/**
+ * POST the issuer for a credential, returns a promise
+ * @param {*} request the POST request parameters
+ * @returns a promise resolving to the credentials in the response
+ */
 async function fetchCredential(request) {
 
 	const POSTconfig = {
@@ -139,14 +142,17 @@ async function fetchCredential(request) {
 
     return fetch( request.IssuingURL, POSTconfig)
     .then(res => {
-		console.log("RESULT = ", res)
 		return res.json()})
     .then(data => {
-		console.log("RECEIVED CREDENTIAL = ", data)
+		console.log("Received VC: ", data)
     	return data});
 }
 
-
+/**
+ * Parse JWT and return ONLY the body
+ * @param {*} token JWT token
+ * @returns JWT body in JSON or null if input not valid JWT.
+ */
 function parseJwt (token) {
     try {
       return JSON.parse(atob(token.split('.')[1]));

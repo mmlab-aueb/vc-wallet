@@ -9,6 +9,7 @@ document.getElementById("Issuers_list_ul").addEventListener("click",
     window.location.href = "../html/getVC_popup.html"
 });
 
+
 // format the Issuers and VCs areas in the DOM
 function DOMaddIssuer(issuer_name, issuer_URL) {  
     //Delete the initial message of the saved issuers div
@@ -23,6 +24,7 @@ function DOMaddIssuer(issuer_name, issuer_URL) {
     // add the new list elemnt
     issuers_ul.appendChild(new_issuer_li)
 };
+
 
 // read the saved issuers and vcs and display them in the popup
 const main = () => {

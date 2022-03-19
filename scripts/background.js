@@ -7,23 +7,6 @@ var _ORG = "AUEB";
 
 browser.storage.local.set({userInfo: {username: _USER, org: _ORG}}, ()=>{})
 
-// browser.runtime.onInstalled.addListener(
-//     (details) => {
-//         if (details.reason == "update" || details.reason == "install") {
-            
-//             const keys = generateKeys(logedInInfo)
-
-//             keys.then(([pk_jwk, wraped_key]) => {
-//                 const wrapedKey_data = JSON.stringify(Array.from(new Uint8Array(wraped_key)));
-//                 browser.storage.local.set({keys: {pubKey: pk_jwk, wrapedKey: wrapedKey_data}})
-//                 }
-
-//             ).catch((e)=>{console.log("Error in creating client keys: ", e)})
-//         }
-//     }
-// )
-
-
 async function awaitForPassword() {
 
     return new Promise((resolve, reject) => {
@@ -46,7 +29,6 @@ const main = async () => {
     // This will give O(1) lookup for auds
     var auds = {};
     var urlsToCheck = [];
-    const cache = {};
 
     // Get the state
     let SavedCredentials = {}
@@ -91,14 +73,13 @@ const main = async () => {
         }
     })
 
-
     /**
      * the callback for the request listener as a named function
      * (used also to remove the listener)
+     * @param {*} e the request event
+     * @returns Promise resolving with the request headers
      */
-    var created = false;
     async function reqListenerCallback (e) {
-        console.log("on onBeforeSendHeaders, e = ", e)
         console.log("on onBeforeSendHeaders, auds = ", auds)
     
         // Remove the port from the url
@@ -107,22 +88,12 @@ const main = async () => {
         // check if the request is for a protected resource for which 
         // there is a saved vc.
         const audience = hasCredential(auds,  e.url)
- 
-        console.log(" ---> audience = ", audience)
 
         if (audience) {
-            // if (cache[audience] == undefined) {
-                // Ask for permision from the user
-                // TODO: break if user presses cancel
-                //alert(e.url + " Reqests a Credential");
-            // }
             const credentials = auds[audience];
             
-            // TODO: How to choose what credential from the list to send??
+            // TODO: How to choose which credential with the same aud to send??
             const credential = credentials[0]
-            console.log("on onBeforeSendHeaders, credentials = ", credentials)
-            console.log("on onBeforeSendHeaders, credential = ", credential)
-            console.log("on onBeforeSendHeaders, credential.vcJwt = ", credential.vcJwt)
 
             // Add the auth header
             if (credential) {
@@ -130,29 +101,12 @@ const main = async () => {
                                        value: "Bearer " + credential.vcJwt});
             }
 
-            cache[audience] = credential
-
-            if(!(logedInInfo) && !created) {
-                var w = 366;
-                var h = 240;
-                browser.windows.create({
-                    url: "../html/login-popup.html", 
-                    type: "popup",
-                    width: w,
-                    height: h,
-                    left: (screen.width/2)-(w/2),
-                    top: (screen.height/2)-(h/2)
-                });
-                created = true;
-
-                //const _res = await awaitForPassword();
-                //TODO: What if the user closes the popup without supling a password
-            }
-
+            // Get the keys with which to create the dpop
             const keys = credential.keys;
             const pubKey = keys.pubKey;
             const wrapedKey = keys.wrapedKey;
 
+             // Get the dpop
             const dpop_jwt = await dpop(pubKey,
                  wrapedKey,
                  e.method, 
@@ -165,17 +119,18 @@ const main = async () => {
             }
 
         const headers = e.requestHeaders
-        
-        console.log("RETURNED e.requestHeaders = ", headers)
+        console.log("Injected request headers = ", headers)
     
         return new Promise((resolve, reject) => {resolve({requestHeaders: headers})});
     }
 
 
     /**
-     *  Add a HTTP request event listener
+     * Add a HTTP request event listener
+     * @param {*} auds audiences to vc's map
+     * @param {*} urlsToCheck target urls to listen for requests
      */
-    function addRequestListener(auds, urlsToCheck, cache) {
+    function addRequestListener(auds, urlsToCheck) {
         console.log("urlsToCheck = ", urlsToCheck)
         //HTTP GET Request event listener
         browser.webRequest.onBeforeSendHeaders.addListener(
@@ -190,7 +145,7 @@ const main = async () => {
 
     if (urlsToCheck.length > 0) {
         console.log("ADDING HTTP REQUEST LISTENER")
-        addRequestListener(auds, urlsToCheck, cache);
+        addRequestListener(auds, urlsToCheck);
     }
 
     // Update the state when needed (i.e., when a new vc is saved)
@@ -222,7 +177,7 @@ const main = async () => {
                 } catch(e) {console.log("in background.js, on browser.storage.onChanged, error = ", e)}
 
                 if (urlsToCheck.length > 0) {
-                    addRequestListener(auds, urlsToCheck, cache);
+                    addRequestListener(auds, urlsToCheck);
                 }
             }
         }
@@ -230,20 +185,3 @@ const main = async () => {
 }
 
 main();
-
-/**
- * Create a key pair on update (for debuging, will 
- * be on install normally)
- */
-// browser.runtime.onInstalled.addListener(
-//     (details) => {
-//         if (details.reason == "update" || details.reason == "install") {
-//             // open a login popup the first time the
-//             // user opens the extension
-//             browser.browserAction.setPopup(
-//                 {popup: "../html/signin-popup.html"},
-//                 ()=>{}
-//               )
-//         }
-//     }
-// )
