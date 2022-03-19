@@ -17,7 +17,7 @@ import bodyParser from "body-parser";
 import keyutil from 'js-crypto-key-utils';
 import {KeyManagementServiceClient} from '@google-cloud/kms';
 import crypto from 'crypto';
-
+import base64url from 'base64url';
 
 const app = express()
 const router = express.Router();
@@ -55,7 +55,7 @@ app.post("/signature", async (req, res) => {
 	var _API_KEY = 'AIzaSyBSdER1XE7nahA__wFsR8MW92bevaCyKKU'
 	var _API_ENDPOINT = 'https://cloudkms.googleapis.com/v1/'
 
-	if (req.headers.origin == 'moz-extension://a4077105-b5ec-42ae-8a36-0d66666c2a0e') {
+	if (req.headers.origin != undefined) {
 		console.log("ACCEPTED")
 		// Read data to Sign
 		const ReqMessage = req.body.data;
@@ -83,46 +83,66 @@ app.post("/signature", async (req, res) => {
 		  cryptoKeyVersions
 		);
 
-		
-    const hash = crypto.createHash('sha256');
-    hash.update(message);
-    const digest = hash.digest();
+	
+	const header = {"alg": "ES256", "typ": "JWT"};
+	const body = {"jti": "test_jti"};
 
+	const header_b64url = base64url.encode(JSON.stringify(header));
+	const body_b64url = base64url.encode(JSON.stringify(body));
+	const token = header_b64url + "." + body_b64url;
+	const message2 = Buffer.from(token, 'utf-8').toString("base64");
+	const message2_base64url = base64url.fromBase64(message2);
+
+    const hash = crypto.createHash('sha256');
+    hash.update(message2_base64url);
+    const digest = hash.digest();
+	
+	console.log("======================================================");
+	console.log(message2_base64url);
+	console.log("======================================================");
     const [signResponse] = await client.asymmetricSign({
     	name: versionName,
-    	data: message
+    	data: message2_base64url
     	// digest: {
     	// 	sha256: digest,
     	// 	}
     	}
     );
 
+	const pubkey = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEy3CYg1dG8m26/H5ME4OVtprm0FbSvQNJg40hEFTo7gf0QMda+Ir5kKO3Da54Te1qf5609opDVgn9cLb/64xwug==";
+	
+	const pubkey_b64url = 
+	"-----BEGIN PUBLIC KEY-----" 
+	+ base64url.fromBase64(pubkey) + 
+	"-----END PUBLIC KEY-----"
+	
+	console.log("base64url pub key = ", pubkey_b64url);
 
-    console.log("signResponse.signature = ", signResponse)
-    const encodedSign = signResponse.signature.toString('base64');
-    const base64url_encodedSign = encodedSign.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+	console.log("signResponse.signature = ", signResponse)
+    const base64_encodedSign = signResponse.signature.toString('base64');
+    const base64url_encodedSign = base64url.fromBase64(base64_encodedSign);
 
-    console.log("encodedSign = ", encodedSign)
-    console.log("DPOP = ", ReqMessage + "." + base64url_encodedSign)
+    console.log("encodedSign = ", base64_encodedSign)
+    console.log("DPOP = ", token + "." + base64url_encodedSign)
 
 
     // validate the signature
     //      
-    const[publicKeyObject] = await client.getPublicKey({name: versionName}).catch(console.error);
-		const publicKey = publicKeyObject.pem;
+    // const[publicKeyObject] = await client.getPublicKey({name: versionName}).catch(console.error);
+	// 	const publicKey = publicKeyObject.pem;
 
-		const keyObjFromPem = new keyutil.Key('pem', publicKey);
-		const jwk = await keyObjFromPem.export('jwk');
-		console.log("jwk = ", jwk)
+	// 	const keyObjFromPem = new keyutil.Key('pem', publicKey);
+	// 	const jwk = await keyObjFromPem.export('jwk');
+	// 	console.log("jwk = ", jwk)
 
-		const jwkPubKey = crypto.createPublicKey(JSON.stringify(jwk))
-		console.log("jwkPubKey = ", jwkPubKey)
+	// 	const jwkPubKey = crypto.createPublicKey(JSON.stringify(jwk))
+	// 	console.log("jwkPubKey = ", jwkPubKey)
 
-    const verify = crypto.createVerify('sha256');
-    verify.write(message);
-    verify.end();
-    const ver = verify.verify(publicKey, encodedSign, 'base64');
-    console.log("SIGNATURE VERIFY = ", ver);
+    // const verify = crypto.createVerify('sha256');
+    // verify.write(message);
+    // verify.end();
+    // const ver = verify.verify(publicKey, encodedSign, 'base64');
+    // console.log("SIGNATURE VERIFY = ", ver);
 
 		// Respond with signature
 	}

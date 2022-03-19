@@ -76,36 +76,38 @@ document.getElementById("getVC_btn").addEventListener("click", async function(){
 		const PubKeyReqBody = JSON.stringify({auth: {access_token: accessToken}, 
 			                                  keyInfo: KeyInfo_EC})
 		
-		const pubKey = await fetch("http://127.0.0.1:3002/pubKey",
-			{
-				headers: {
-					"Content-Type": "application/json",
-					"Accept": "application/json"
-				},
-				method: "POST",
-				body: PubKeyReqBody
-			}
-		).then((res) => {return res.json()})
+		// const pubKey = await fetch("http://127.0.0.1:3002/pubKey",
+		// 	{
+		// 		headers: {
+		// 			"Content-Type": "application/json",
+		// 			"Accept": "application/json"
+		// 		},
+		// 		method: "POST",
+		// 		body: PubKeyReqBody
+		// 	}
+		// ).then((res) => {return res.json()})
 
-		const JwkPubKey = pubKey.JWK
-		// JwkPubKey.kty = "RS256"
-		JwkPubKey.alg = "ES256"
-		console.log("FETCHING PUB KEY = ", JwkPubKey)
+		// const JwkPubKey = pubKey.JWK
+		// // JwkPubKey.kty = "RS256"
+		// JwkPubKey.alg = "ES256"
+		// console.log("FETCHING PUB KEY = ", JwkPubKey)
 		
 		// Get the DPoP token to sign
-		const dpopTokenEncoded = await dpop_token(
-			JwkPubKey,
-			_request.method, 
-			_request.IssuingURL,
-			"ES256")  //RS256
-		console.log("DPOP TOKEN = ", dpopTokenEncoded)
+		// const dpopTokenEncoded = await dpop_token(
+		// 	JwkPubKey,
+		// 	_request.method, 
+		// 	_request.IssuingURL,
+		// 	"ES256")  //RS256
+		// console.log("DPOP TOKEN = ", dpopTokenEncoded)
 
 
 		// Request Signature From Proxy
 		const SignReqBody = JSON.stringify({auth: {access_token: accessToken},
-											data: dpopTokenEncoded,
-											keyInfo: KeyInfo_EC})
-
+											data: "dpopTokenEncoded",
+											keyInfo: KeyInfo_EC
+										});
+		
+		console.log("Posting server")
 		const signature = await fetch("http://127.0.0.1:3002/signature",
 			{
 				headers: {
