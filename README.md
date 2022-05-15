@@ -2,7 +2,7 @@
 A wallet for handling Verifiable Credentials implemented by the [ZeroTrustVC](https://mm.aueb.gr/projects/zerotrustvc) project. The wallet is implemented as a Firefox browser extension.
 
 ### Usage
-You can use the extension by loading it as a temporary add-on from the `about:debugging` Firefox page.
+You can use the extension by loading it as a temporary add-on from the `about:debugging` Firefox page (`about:debugging` -> `This Firefox` -> `Load Temporary Add-on` and click to any file on the directory of the extension).
 
 To request a credential, click in the "Get Credential" button and supply the issuers end-point and the wallet credentials as `username:password`.
 
